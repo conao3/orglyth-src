@@ -1,3 +1,12 @@
+#+title: org-export-as
+#+subtitle: org-exportにおけるorg記法のパース
+#+author: conao
+#+date: <2018-08-09 Thu 09:28>
+
+# history
+#
+# <2018-08-09 Thu 09:28> first draft
+
 #+BEGIN_SRC elisp -n
 (defun org-export-as
     (backend &optional subtreep visible-only body-only ext-plist)
