@@ -1,3 +1,12 @@
+#+title: org-make-options-regexp
+#+subtitle: org記法をパースする正規表現を作る
+#+author: conao
+#+date: <2018-08-09 Thu 09:56>
+
+# history
+#
+# <2018-08-09 Thu 09:56> first draft
+
 #+BEGIN_SRC elisp -n
   (defun org-make-options-regexp (kwds &optional extra)
     "Make a regular expression for keyword lines.
@@ -8,3 +17,7 @@
         (and extra (concat (and kwds "\\|") extra))
         "\\):[ \t]*\\(.*\\)"))
 #+END_SRC
+
+
+
+
