@@ -1,0 +1,16 @@
+#+title: org-with-gensyms
+#+subtitle: シンボル作成のマクロ
+#+date: <2018-08-09 Thu 10:23>
+#+author: conao
+
+# history
+# <2018-08-09 Thu 10:23> first draft
+
+#+begin_src emacs-lisp -n
+  (defmacro org-with-gensyms (symbols &rest body)
+    (declare (debug (sexp body)) (indent 1))
+    `(let ,(mapcar (lambda (s)
+                     `(,s (make-symbol (concat "--" (symbol-name ',s)))))
+                   symbols)
+       ,@body))
+#+end_src
