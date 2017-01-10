@@ -1,0 +1,20 @@
+#+title: org-preserve-lc
+#+subtitle: ポイント位置を保存してbodyを実行する
+#+date: <2018-08-09 Thu 10:52>
+#+author: conao
+#+orglyth-tags: org-mode org-macs
+
+# history
+# <2018-08-09 Thu 10:52> first draft
+
+#+begin_src emacs-lisp -n
+  (defmacro org-preserve-lc (&rest body)
+    (declare (debug (body)))
+    (org-with-gensyms (line col)
+      `(let ((,line (org-current-line))
+             (,col (current-column)))
+         (unwind-protect
+             (progn ,@body)
+           (org-goto-line ,line)
+           (org-move-to-column ,col)))))
+#+end_src
