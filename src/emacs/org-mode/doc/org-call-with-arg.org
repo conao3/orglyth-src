@@ -1,0 +1,17 @@
+#+title: org-call-with-arg
+#+subtitle: 
+#+date: <2018-08-09 Thu 11:32>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 11:32> first draft
+
+#+begin_src emacs-lisp -n
+  (defsubst org-call-with-arg (command arg)
+    "Call COMMAND interactively, but pretend prefix arg was ARG."
+    (let ((current-prefix-arg arg)) (call-interactively command)))
+#+end_src
+
+- [[../../doc/current-prefix-arg.org]]
+- [[../../doc/call-interactively.org]]
