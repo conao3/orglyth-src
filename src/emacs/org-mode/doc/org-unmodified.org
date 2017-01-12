@@ -1,0 +1,23 @@
+#+title: org-unmodified
+#+subtitle: バッファ内容を保存した上でbodyを実行する
+#+date: <2018-08-09 Thu 11:00>
+#+author: conao
+#+orglyth-tags: org-mode org-macs
+
+# history
+# <2018-08-09 Thu 11:01> first draft
+
+#+begin_src emacs-lisp -n
+  ;; Use `org-with-silent-modifications' to ignore cosmetic changes and
+  ;; `org-unmodified' to ignore real text modifications
+  (defmacro org-unmodified (&rest body)
+    "Run BODY while preserving the buffer's `buffer-modified-p' state."
+    (declare (debug (body)))
+    (org-with-gensyms (was-modified)
+      `(let ((,was-modified (buffer-modified-p)))
+         (unwind-protect
+             (let ((buffer-undo-list t)
+                   (inhibit-modification-hooks t))
+               ,@body)
+           (set-buffer-modified-p ,was-modified)))))
+#+end_src
