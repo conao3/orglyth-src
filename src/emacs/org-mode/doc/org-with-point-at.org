@@ -1,0 +1,21 @@
+#+title: org-with-point-at
+#+subtitle: pointに移動した上でbodyを実行する
+#+date: <2018-08-09 Thu 11:05>
+#+author: conao
+#+orglyth-tags: org-mode org-macs
+
+# history
+# <2018-08-09 Thu 11:05> first draft
+
+#+begin_src emacs-lisp -n
+  (defmacro org-with-point-at (pom &rest body)
+    "Move to buffer and point of point-or-marker POM for the duration of BODY."
+    (declare (debug (form body)) (indent 1))
+    (org-with-gensyms (mpom)
+      `(let ((,mpom ,pom))
+         (save-excursion
+           (if (markerp ,mpom) (set-buffer (marker-buffer ,mpom)))
+           (org-with-wide-buffer
+            (goto-char (or ,mpom (point)))
+            ,@body)))))
+#+end_src
