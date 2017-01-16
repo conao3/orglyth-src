@@ -1,0 +1,25 @@
+#+title: org-no-read-only
+#+subtitle: 書き込み不可のバッファに書き込みを行う
+#+date: <2018-08-09 Thu 11:11>
+#+author: conao
+#+orglyth-tags: org-mode org-macs
+
+# history
+# <2018-08-09 Thu 11:11> first draft
+
+#+begin_src emacs-lisp -n
+  (defmacro org-no-read-only (&rest body)
+    "Inhibit read-only for BODY."
+    (declare (debug (body)))
+    `(let ((inhibit-read-only t)) ,@body))
+#+end_src
+
+#+begin_src C -n
+  DEFVAR_LISP ("inhibit-read-only", Vinhibit_read_only,
+               doc: /* Non-nil means disregard read-only status of buffers or characters.
+                       If the value is t, disregard `buffer-read-only' and all `read-only'
+                       text properties.  If the value is a list, disregard `buffer-read-only'
+                       and disregard a `read-only' text property if the property value
+                       is a member of the list.  */);
+  Vinhibit_read_only = Qnil;
+#+end_src
