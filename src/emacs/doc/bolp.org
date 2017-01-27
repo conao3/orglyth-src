@@ -7,6 +7,8 @@
 # history
 # <2018-08-09 Thu 12:53> first draft
 
+「bol」は「Beginning of Line」の略と思われる。
+
 #+begin_src C -n
   DEFUN ("bolp", Fbolp, Sbolp, 0, 0, 0,
          doc: /* Return t if point is at the beginning of a line.  */)
