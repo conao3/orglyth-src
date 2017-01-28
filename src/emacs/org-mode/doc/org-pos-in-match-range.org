@@ -1,0 +1,15 @@
+#+title: org-pos-in-match-range
+#+subtitle: マッチしているかどうか検査する
+#+date: <2018-08-09 Thu 13:07>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 13:07> first draft
+
+#+begin_src emacs-lisp -n
+  (defsubst org-pos-in-match-range (pos n)
+    (and (match-beginning n)
+         (<= (match-beginning n) pos)
+         (>= (match-end n) pos)))
+#+end_src
