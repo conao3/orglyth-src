@@ -1,0 +1,18 @@
+#+title: org-with-wide-buffer
+#+subtitle: 一時的になローイングを解除してbodyを実行する
+#+date: <2018-08-09 Thu 13:16>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 13:16> first draft
+
+#+begin_src emacs-lisp -n
+  (defmacro org-with-wide-buffer (&rest body)
+    "Execute body while temporarily widening the buffer."
+    (declare (debug (body)))
+    `(save-excursion
+       (save-restriction
+         (widen)
+         ,@body)))
+#+end_src
