@@ -1,0 +1,24 @@
+#+title: org-with-limited-levels
+#+subtitle: 与えられたレベル以下のツリーを隠した上でbodyを実行する
+#+date: <2018-08-09 Thu 13:19>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 13:19> first draft
+
+#+begin_src emacs-lisp -n
+  (defmacro org-with-limited-levels (&rest body)
+    "Execute BODY with limited number of outline levels."
+    (declare (debug (body)))
+    `(progn
+       (defvar org-called-with-limited-levels)
+       (defvar org-outline-regexp)
+       (defvar outline-regexp)
+       (defvar org-outline-regexp-bol)
+       (let* ((org-called-with-limited-levels t)
+              (org-outline-regexp (org-get-limited-outline-regexp))
+              (outline-regexp org-outline-regexp)
+              (org-outline-regexp-bol (concat "^" org-outline-regexp)))
+         ,@body)))
+#+end_src
