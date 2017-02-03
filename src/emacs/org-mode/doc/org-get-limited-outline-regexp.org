@@ -1,0 +1,29 @@
+#+title: org-get-limited-outline-regexp
+#+subtitle: アウトラインの正規表現を返す
+#+date: <2018-08-09 Thu 13:34>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 13:34> first draft
+
+#+begin_src emacs-lisp -n
+  (defvar org-outline-regexp) ; defined in org.el
+  (defvar org-odd-levels-only) ; defined in org.el
+  (defvar org-inlinetask-min-level) ; defined in org-inlinetask.el
+  (defun org-get-limited-outline-regexp ()
+    "Return outline-regexp with limited number of levels.
+  The number of levels is controlled by `org-inlinetask-min-level'"
+    (cond ((not (derived-mode-p 'org-mode))
+           outline-regexp)
+          ((not (featurep 'org-inlinetask))
+           org-outline-regexp)
+          (t
+           (let* ((limit-level (1- org-inlinetask-min-level))
+                  (nstars (if org-odd-levels-only
+                              (1- (* limit-level 2))
+                            limit-level)))
+             (format "\\*\\{1,%d\\} " nstars)))))
+
+#+end_src
+
