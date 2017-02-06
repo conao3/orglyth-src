@@ -1,0 +1,30 @@
+#+title: org-load-noerror-mustsuffix
+#+subtitle: noerror, mustsuffixを伴ってロードする
+#+date: <2018-08-09 Thu 13:56>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 13:57> first draft
+
+#+begin_src emacs-lisp -n
+  (defmacro org-load-noerror-mustsuffix (file)
+    "Load FILE with optional arguments NOERROR and MUSTSUFFIX."
+    `(load ,file 'noerror nil nil 'mustsuffix))
+#+end_src
+
+- [[../../doc/load.org]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
