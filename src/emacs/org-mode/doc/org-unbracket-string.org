@@ -1,0 +1,19 @@
+#+title: org-unbracket-string
+#+subtitle: 文字列から先頭と末尾の指定文字列を削除する
+#+date: <2018-08-09 Thu 14:03>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 14:03> first draft
+
+#+begin_src emacs-lisp -n
+  (defun org-unbracket-string (pre post string)
+    "Remove PRE/POST from the beginning/end of STRING.
+  Both PRE and POST must be pre-/suffixes of STRING, or neither is
+  removed."
+    (if (and (string-prefix-p pre string)
+             (string-suffix-p post string))
+        (substring string (length pre) (- (length post)))
+      string))
+#+end_src
