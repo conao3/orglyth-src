@@ -1,0 +1,10 @@
+#+title: ob-C.el
+#+subtitle: babelにおけるCサポート
+#+date: <2018-08-11 Sat 00:38>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode babel
+
+# history
+# <2018-08-11 Sat 00:38> first draft
+
+
