@@ -1,0 +1,13 @@
+#+title: org-macs.el
+#+subtitle: org-modeにおける便利マクロの定義
+#+date: <2018-08-11 Sat 00:44>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode
+
+# history
+# <2018-08-11 Sat 00:44> first draft
+
+=org-macs.el= はorg-modeの各パッケージで使用される便利マクロをまとめたものです。
+詳細は各個別ページをご覧ください。
+
+
