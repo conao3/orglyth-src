@@ -1,0 +1,16 @@
+#+title: b.el
+#+subtitle: バッファ操作に関する便利ライブラリ
+#+date: <2018-08-11 Sat 00:55>
+#+author: conao
+#+orglyth-tags: <2018-08-11 Sat 00:55>
+
+# history
+# <2018-08-11 Sat 00:55> first draft
+
+
+#+begin_src emacs-lisp -n
+(current-buffer)
+#+end_src
+
+#+RESULTS:
+: #<buffer b.org>
