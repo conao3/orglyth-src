@@ -1,0 +1,49 @@
+#+title: plenv
+#+subtitle: pyenvをリスペクトしたperl用バージョン管理コマンド
+#+date: <2018-08-11 Sat 14:11>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-11 Sat 14:11> first draft
+
+* =plenv= とは
+=plenv= とは =pyenv= をリスペクトしたperl用バージョン管理コマンドです。
+
+=pyenv= と同じ操作感でperlのバージョン管理を行うことができます。
+
+* インストール
+=anyenv= を使ってインストールします。
+=anyenv= のインストールをされていない方は[[./anyenv.org][こちら]]
+
+#+begin_src shell -n
+  > anyenv versions
+  goenv:
+  Warning: no Go detected on the system
+
+  ndenv:
+  ,* v10.7.0 (set by /Users/conao/.anyenv/envs/ndenv/version)
+  plenv:
+  ,* system (set by /Users/conao/.anyenv/envs/plenv/version)
+  pyenv:
+    system
+  ,* 2.7.15 (set by /Users/conao/.anyenv/envs/pyenv/version)
+  ,* 3.7.0 (set by /Users/conao/.anyenv/envs/pyenv/version)
+  rbenv:
+  ,* system (set by /Users/conao/.anyenv/envs/rbenv/version)
+
+  > plenv install --list
+  Available versions:
+   5.29.1
+   5.29.0
+   5.28.0
+   5.28.0-RC4
+   5.28.0-RC3
+   5.28.0-RC2
+   5.28.0-RC1
+   5.27.11
+   5.27.10
+   ...
+ 
+  > plenv install 5.29.1
+#+end_src
