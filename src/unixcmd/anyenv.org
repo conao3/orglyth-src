@@ -1,0 +1,62 @@
+#+title: anyenv
+#+subtitle: *envをひとまとめにして管理しやすくする神コマンド
+#+date: <2018-08-11 Sat 14:18>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-11 Sat 14:18> first draft
+
+* =anyenv= とは
+=anyenv= とは =pyenv= などの =*env= を管理するためのメタコマンドです。
+
+* インストール
+[[https://github.com/riywo/anyenv][riywo/anyenv]]からReadmeのとおりインストールします。
+#+begin_src shell -n
+  $ git clone https://github.com/riywo/anyenv ~/.anyenv
+  $ echo 'export PATH="$HOME/.anyenv/bin:$PATH"' >> ~/.your_profile
+  $ echo 'eval "$(anyenv init -)"' >> ~/.your_profile
+  $ exec $SHELL -l
+#+end_src
+
+ただし、fishを使っている場合は、config.fishに以下を追加します。
+#+begin_src shell -n
+  # anyenv
+  set PATH $HOME/.anyenv/bin $PATH
+  anyenv init - | source
+#+end_src
+
+* 使い方
+** =*env= のインストール
+#+begin_src shell -n
+  $ anyenv install --list
+  Available **envs:
+    Renv
+    crenv
+    denv
+    erlenv
+    exenv
+    goenv
+    hsenv
+    jenv
+    luaenv
+    ndenv
+    nenv
+    nodenv
+    phpenv
+    plenv
+    pyenv
+    rbenv
+    sbtenv
+    scalaenv
+    swiftenv
+  $ anyenv install rbenv
+  $ anyenv install plenv
+  $ anyenv install pyenv
+  $ anyenv install phpenv
+  $ anyenv install ndenv
+  $ anyenv install denv
+  $ anyenv install jenv
+  $ anyenv install luaenv
+  $ anyenv install goenv
+#+end_src
