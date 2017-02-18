@@ -1,0 +1,19 @@
+#+title: rbenv
+#+subtitle: rubyのバージョン管理
+#+date: <2018-08-11 Sat 14:41>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-11 Sat 14:41> first draft
+
+* =rbenv= とは
+pythonでは =pyenv= や =virtualenv= などの情報が入り乱れて結局ベストプラクティスがわかりにくくなってますが、
+rubyの場合 =rbenv= がデファクトスタンダードとなっています。
+
+プロジェクト(カレントディレクトリ)ごとにrubyのバージョンを切り替えることができます。
+* インストール
+=anyenv= を使ってインストールします。
+=anyenv= のインストールがまだの方は[[./anyenv.org][こちら]]
+
+
