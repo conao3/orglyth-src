@@ -16,4 +16,38 @@ rubyの場合 =rbenv= がデファクトスタンダードとなっています�
 =anyenv= を使ってインストールします。
 =anyenv= のインストールがまだの方は[[./anyenv.org][こちら]]
 
+#+begin_src shell -n
+  $ anyenv install rbenv
+  $ anyenv versions
+  goenv:
+  Warning: no Go detected on the system
 
+  ndenv:
+  ,* v10.7.0 (set by /Users/conao/.anyenv/envs/ndenv/version)
+  plenv:
+    system
+  ,* 5.26.1 (set by /Users/conao/.anyenv/envs/plenv/version)
+  pyenv:
+    system
+  ,* 2.7.15 (set by /Users/conao/.anyenv/envs/pyenv/version)
+  ,* 3.7.0 (set by /Users/conao/.anyenv/envs/pyenv/version)
+  rbenv:
+  ,* system (set by /Users/conao/.anyenv/envs/rbenv/version)
+
+  $ rbenv install -list
+  Available versions:
+    1.8.5-p52
+    1.8.5-p113
+    1.8.5-p114
+    1.8.5-p115
+    1.8.5-p231
+
+    ...
+
+    2.5.0
+    2.5.1
+    2.6.0-dev
+    2.6.0-preview1
+    2.6.0-preview2
+  $ rbenv install 2.5.1
+#+end_src
