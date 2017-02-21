@@ -13,6 +13,7 @@ rubyの場合 =rbenv= がデファクトスタンダードとなっています�
 
 プロジェクト(カレントディレクトリ)ごとにrubyのバージョンを切り替えることができます。
 * インストール
+** =anyenv= のインストール
 =anyenv= を使ってインストールします。
 =anyenv= のインストールがまだの方は[[./anyenv.org][こちら]]
 
@@ -33,7 +34,9 @@ rubyの場合 =rbenv= がデファクトスタンダードとなっています�
   ,* 3.7.0 (set by /Users/conao/.anyenv/envs/pyenv/version)
   rbenv:
   ,* system (set by /Users/conao/.anyenv/envs/rbenv/version)
-
+#+end_src
+** =ruby= のインストール
+#+begin_src shell -n
   $ rbenv install -list
   Available versions:
     1.8.5-p52
@@ -50,4 +53,30 @@ rubyの場合 =rbenv= がデファクトスタンダードとなっています�
     2.6.0-preview1
     2.6.0-preview2
   $ rbenv install 2.5.1
+  ruby-build: use openssl from homebrew
+  Downloading ruby-2.5.1.tar.bz2...
+  -> https://cache.ruby-lang.org/pub/ruby/2.5/ruby-2.5.1.tar.bz2
+  Installing ruby-2.5.1...
+  ruby-build: use readline from homebrew
+  Installed ruby-2.5.1 to /Users/conao/.anyenv/envs/rbenv/versions/2.5.1
+
+  rbenv: cannot rehash: /Users/conao/.anyenv/envs/rbenv/shims/.rbenv-shim exists  
+#+end_src
+** can't rehash
+なんか失敗したっぽいので、原因っぽいファイルを消す。
+#+begin_src shell -n
+  $ cd .anyenv/envs/rbenv/shims
+  $ ls -la
+  total 8
+  drwxr-xr-x   3 conao  staff   96  7 29 03:21 .
+  drwxr-xr-x  19 conao  staff  608  7 24 10:31 ..
+  -rw-r--r--   1 conao  staff  423  7 29 03:21 .rbenv-shim
+  $ rm .rbenv-shim
+  $ rbenv rehash
+  $ rbenv versions
+  ,* system (set by /Users/conao/.anyenv/envs/rbenv/version)
+    2.5.1
+  $ rbenv global 2.5.1
+  $ ruby -v
+  ruby 2.5.1p57 (2018-03-29 revision 63029) [x86_64-darwin17]
 #+end_src
