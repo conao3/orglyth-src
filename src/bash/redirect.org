@@ -1,0 +1,38 @@
+#+title: リダイレクト
+#+subtitle: 標準出力・標準エラー出力を思いのままに出力する
+#+date: <2018-08-11 Sat 15:51>
+#+author: conao
+#+orglyth-tags: bash
+
+# history
+# <2018-08-11 Sat 15:51> first draft
+
+* リダイレクトとは
+シェルコマンドは標準出力と標準エラー出力の2種類の出力ストリームを利用できます。
+
+標準出力をプロンプトに出さずに捨てたり、ファイルに保存したり、ストリームをどこに出力したりするかを指定できる。
+
+* 書式
+** サンプルプログラム
+#+name: code:sample
+#+caption: sample.c
+#+begin_src C -n
+  #include <stdio.h>
+
+  int main() {
+      printf("nomal output\n");
+      fprintf(stdout, "stdout output\n");
+      fprintf(stderr, "error output\n");
+  }
+#+end_src
+
+コード[[code:sample]]を使用して解説する。
+
+C言語において、 =printf= は標準出力に文字列を出力する。
+=fprintf= は出力ストリームを選択した上で文字列を出力する。
+
+そのため上2行は標準出力に出力されるが、一番下の行は標準エラー出力に出力される。
+** 標準出力
+=<cmd>= =>= =<nomal redirect>=
+  
+  
