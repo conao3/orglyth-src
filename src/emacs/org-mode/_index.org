@@ -3,7 +3,8 @@
 #+tags: emacs, org-mode
 
 * 環境
-- Emacs 25.3.1
-  - org-mode 9.1.13
+- [[../emacs/index.org][Emacs 25.3.1]]
+  - [[./index.org][org-mode 9.1.13]]
+
 * インストール
 
