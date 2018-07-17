@@ -1,0 +1,9 @@
+#+title: Emacsを使う最大の理由！文書作成のすべてをorg-modeで記述しよう！
+#+date: <2018-07-17 Tue 09:30>
+#+tags: emacs, org-mode
+
+* 環境
+- Emacs 25.3.1
+- org-mode
+* インストール
+
