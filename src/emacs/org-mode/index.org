@@ -1,4 +1,5 @@
 #+title: Emacsを使う最大の理由！文書作成のすべてをorg-modeで記述しよう！
+#+author: conao
 #+date: <2018-07-17 Tue 09:30>
 #+tags: emacs, org-mode
 
