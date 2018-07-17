@@ -4,6 +4,6 @@
 
 * 環境
 - Emacs 25.3.1
-- org-mode
+  - org-mode 9.1.13
 * インストール
 
