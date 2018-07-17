@@ -2,9 +2,60 @@
 #+date: <2018-07-17 Tue 09:30>
 #+tags: emacs, org-mode
 
+# history
+# <2018-07-17 Tue 11:04> - first draft
+
+Emacsを使う理由は様々あると思いますが、私がEmacsを使う最大の理由は *org-modeが使えること* です。
+会議の議事録や、規約の編集、卒業論文まで全ての文書作成をorg-modeで行うことができます。
+
 * 環境
-- [[../emacs/index.org][Emacs 25.3.1]]
-  - [[./index.org][org-mode 9.1.13]]
+- [[../emacs/index.org][Emacs - 25.3.1]]
+  - [[../use-package.org][use-package - 2.4]]
+  - org-mode - 9.1.13
 
+* はじめに
+org-modeで記述する利点としては、プレーンテキストで文書を作成するため *diffがみやすくなる* という点があります。
+最近ではWardのようなリッチ文書作成ソフトでもdiffを取りやすくなっているようですが、プレーンテキストにはかないません。
+git管理することで、その文書を *誰が*, *いつ* 書き換えたのか明白に管理できますし、巻き戻しも容易です。
+コミットメッセージを活用することで *なぜ* 書き換えたのかも管理できます。
+
+そうした「管理された文書」を思い通りの形式に *変換して出力* できます。
+例に挙げた会議の議事録や、規約の編集は所属していた交響楽団に関するものでした。
+もちろん団員はEmacsをインストールしていないため、純粋なプレーンテキストとしてのorg-modeは理解しづらいですが、
+*HTMLに出力して印刷し配布* しましたし、後輩には *Word形式* で引き継ぐことができました。
+
+卒業論文はもちろん *LaTeX* での提出が求められます。この要求に対してもorg-modeは十二分に応えてくれます。
+なぜならorg-modeの文法は簡潔で *執筆に集中できる* 上に、 *編集のためのお助け機能* をorg-modeが提供してくれているからです。
+
+ここだけの話ですが、HTMLやLaTeXは *人間が書くものじゃない* と個人的に考えています。
+HTMLはZen Codingなどのお助け機能やLaTeXもEmacsではYaTeXなどのお助け機能がありますが、根本的に *人間が書くフォーマットじゃない* んです。
+
+その点org-modeを使えば執筆に集中でき、難しい構造を隠してくれる上に、 *多彩なフォーマットに出力* できるのです。
+もう人類はHTMLタグやLaTeX環境、通常マークダウンとQiita記法やはてな記法の違いなどに頭を悩ますことはないのです。
+なぜならorg-mode記法で一回書けば全て変換できるからです！
+
+ちょっと話が大きくなりましたが、本心です。そして私がorg-modeに出会ったときの衝撃です。
+ちなみにEmacsは気難しいやつで当時何度も挫折していた頃でしたが、 *org-modeを使うため* にEmacsと仲良くなって
+今ではEmacsで全てのプログラミング、文書作成を行っています笑
 * インストール
-
+#+name: code:1
+#+caption: org-modeのインストール
+#+BEGIN_SRC elisp
+  (require 'package)
+  (when (not (package-installed-p 'use-package))
+    (package-refresh-contents)
+    (package-install 'use-package))
+  (use-package org :ensure t :defer t
+    :bind (("C-c o l" . org-store-link)
+           ("C-c o a" . org-agenda)
+           ("C-c o c" . org-capture)
+           ("C-c o b" . org-iswitchb))
+    :config
+    (setq org-src-window-setup     'other-window
+          org-use-sub-superscripts '{}))
+#+END_SRC
+上記はgithubで[[https://github.com/conao/dotfiles][公開]]してる.emacs.dからの抜粋です。
+="use-package org"= と検索して実際のコードを見てみるといいかも知れません。
+* org-modeカテゴリ
+org-modeは巨大で、関連するパッケージも多いため小記事に分けます。
+#+include: include.inc
