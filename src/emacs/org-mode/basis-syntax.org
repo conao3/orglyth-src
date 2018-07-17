@@ -1,5 +1,5 @@
 #+title: Emacsを使う最大の理由！文書作成のすべてをorg-modeで記述しよう！org-mode基本文法
-#+date:<2018-07-17 Tue 09:16>
+#+date: <2018-07-17 Tue 09:16>
 #+tags: emacs, org-mode
 
 * インストール
