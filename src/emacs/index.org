@@ -1,0 +1,65 @@
+#+title: Emacsのインストール方法と挫折しないための便利な機能つまみ食い
+#+author: conao
+#+date: <2018-07-17 Tue 11:16>
+#+tags: emacs
+
+# history
+# <2018-07-17 Tue> - first draft
+
+「Emacsは環境である」
+
+Emacs教に魅せられた人がテキストエディタという枠を超えて、すべての作業をEmacsでしようとした名言です。
+以前「全部サーバーサイドですればええやんけ！」という発想の元、Chrome OSなるものが話題になりましたが、
+それよりずっと昔にEmacsは何でもできるようになっていました。
+
+一枚の窓を自由に分割でき、それぞれにテキストを表示するのはもちろん、ウェブも閲覧できますし、
+PDFのようなリッチドキュメントも表示できます。
+
+Emacsをログイン時に起動して、すべての作業をEmacs内で完結させてしまう剛の者がいると噂されますが、実際可能だと思います。
+
+そんな魅力にあふれるEmacsですが初学者には難しく敬遠されがちです。この記事が少しでも助けになればと思います。
+
+* 環境
+- Emacs 25.3.1
+* はじめに
+Emacsは歴史が古く、その遺産を引き継いでいるため他のGUIアプリケーションとは全く異なる操作感になってしまっています。
+代表的なところではCtrl+Cで *コピーできません* し、Ctrl+Vで *ペーストできません* 。
+なんなら長いファイルでCtrl+Vを押すと、急に画面が変わって *パニックになります* 。
+
+ファイルを開くのは一般的にはCtrl+Oでできますが、
+どうやら調べてみると *Ctrlとxを押したあとにCtrlを離さずにfを押さないといけない* ようです。
+はい大パニック。Emacsをもう二度と開かないと心に決めて他のIDEに逃げてしまうことが多いと思います。
+
+#+name: quote:1
+#+caption: Cut, copy, and paste - Wikipedia
+#+BEGIN_QUOTE
+The keys involved all cluster together at the left end of the bottom row 
+of the standard QWERTY keyboard, and each key is combined with a special 
+modifier key to perform the desired operation:
+
+- Z to undo
+- X to cut
+- C to copy
+- V to paste
+#+END_QUOTE
+
+[[https://en.wikipedia.org/wiki/Cut,_copy,_and_paste#Popularization][Wikipedia]]より引用
+
+Emacsがこんな変なキーバインドになっているかというと、[[https://ja.wikipedia.org/wiki/Common_User_Access][Common User Access]](CUA)でコピーなどのキーが
+標準化される前に存在していて、重要なキーを既に割り当ててしまっていたからです。
+
+ということでEmacsを最初に使うときはパニックになりがちで、挫折する人も多いと思いますが、逆にその *悪評* も有名です。
+もちろんEmacsは便利ですし最高のエディタだと思っていますが、
+*友達に自慢したい* という俗なやる気でも始めるきっかけになると思います。私が実際そうですし笑
+
+Emacsを使いたいというきっかけはそれぞれだと思いますが、この記事が助けになれば幸いです。
+* インストール
+* org-mode
+org-modeは最高のEmacsを文書作成ソフトにします。
+「org-modeが使えるからEmacsを使う」という人も私を含め、多いです。
+
+
+
+
+
+

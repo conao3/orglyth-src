@@ -1,0 +1,55 @@
+#+title: Emacsのインストール方法。Mac, Ubuntu, Windows対応！
+#+date: <2018-07-17 Tue 17:48>
+#+tags: emacs, install
+
+Emacsにはいろいろなパッチを当ててる人がいて、それぞれに異なるバイナリが生成されます。
+
+インストールで躓くと何もやる気が起きなくなってしまうので、私がいつも使ってる方法を紹介します。
+* Mac
+Macでは[[https://nrid.nii.ac.jp/ja/nrid/1000000291295/][山本先生]]のパッチを当てたEmacs-Mac-Port(EMP)版のEmacsを使用しています。
+- brew
+
+  brewでは[[https://github.com/railwaycat][railwaycat]]さんが扱いやすいようにラッパを[[https://github.com/railwaycat/homebrew-emacsmacport][書かれています]]ので、下記でインストールできます。
+  #+BEGIN_SRC shell
+    brew tap railwaycat/emacsmacport
+    brew cask install emacs-mac
+  #+END_SRC
+- 野良ビルド
+  
+  私は自分でビルドしています。自分でビルドする最大の利点は *複数バージョンのバイナリを持てる* ことです。
+  Emacsは環境であり、Emacsに依存している我々は、メジャーアップデートをインストールすると丸1日なくなります（汗
+
+  Emacsメンテナさんやパッケージ開発者さんも気をつけられてはいますが、変数がなくなったり名前が変わったりで結構トラブルが起きます。
+  そんな中これまでの環境を上書きしてしまうと何もできなくなってしまいます。。
+
+  私はホームディレクトリのDocumentsフォルダにemacs-<version>フォルダを作成し、
+  下記のシェルスクリプトを配置し、実行してバイナリを作成しています。
+  - [[https://gist.github.com/conao/5529d711a97a8062e4e9298456834be3][emacs-build-24.5.sh]]
+  - [[https://gist.github.com/conao/139179f8d7fead3e53508a8b13fbfc9f][emacs-build-25.3.sh]]
+  - [[https://gist.github.com/conao/38ee583916857f0a69bc3f4137dbd5cf][emacs-build-26.1.sh]]
+  emacs-mac-build内に.appができるので、起動してみて問題がなければ/Applicationsにコピーします。
+
+  #+BEGIN_SRC shell
+    180-240:~/Documents/emacs-26.1 conao$ ./install-emacs.sh 
+    ...
+    ...
+    checking for library containing inflateEnd... -lz
+    configure: error: The following required libraries were not found:
+         gnutls
+    Maybe some development libraries/packages are missing?
+    If you don't want to link with them give
+         --with-gnutls=no
+    as options to configure
+  #+END_SRC
+
+  上記のようなエラーが出た場合 =gnutls= がないということなので、 =brew install gnutls= してあげます。
+  このように問題が起こった場合自分で対処しないといけないので、慣れないと大変かもしれません。
+* Ubuntu
+Ubuntuではapt-getでよしなにいれます。 =sudo apt-get install emacs= ではどんなバージョンがインストールされるかわからないので、
+=apt-cache search emacs= を実行して自分がほしいemacsをインスールします。
+* Windows
+Windowsでは[[https://ja.osdn.net/projects/gnupack/][gnupack]]が好きです。(一番最初に使ったので。)
+最新版をダウンロードして展開するだけでEmacsやいろいろなCUIソフトを使えるようになります。
+
+現在は改善されているかも知れませんが、日本語パスと相性が悪いので、Cドライブ直下に展開してリンクをデスクトップにはるといいと思います。
+
