@@ -1,5 +1,12 @@
 ErrorDocument 404 /build/404.html
 
+SetEnvIf REDIRECT_HTTPS (.*) HTTPS=$1 
+<IfModule mod_rewrite.c>
+RewriteEngine on 
+RewriteCond %{ENV:HTTPS} !on 
+RewriteRule .* https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L] 
+</IfModule>
+
 RewriteEngine on
 RewriteBase /
 # RewriteCond %{REQUEST_URI} !(^/build/)

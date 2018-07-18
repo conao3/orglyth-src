@@ -3,14 +3,11 @@
 
 * Installation
 Org is part of recent distributions of GNU Emacs, so you normally don’t need to install it. If, for one reason or another, you want to install Org on top of this pre-packaged version, there are three ways to do it:
-#+INDEX: CV
 
 - By using Emacs package system.
 - By downloading Org as an archive.
 - By using Org’s git repository.
-* Curriculum Vitae
-#+INDEX: CV
-#+INDEX: Application!CV
+
 
 We *strongly recommend* to stick to a single installation method.
 
@@ -20,7 +17,6 @@ We *strongly recommend* to stick to a single installation method.
  *Important* : you need to do this in a session where no .org file has been visited, i.e., where no Org built-in function have been loaded. Otherwise autoload Org functions will mess up the installation.
 
  Then, to make sure your Org configuration is taken into account, initialize the package system with (package-initialize) in your Emacs init file before setting any Org option. If you want to use Org’s package repository, check out the Org ELPA page.
-#+INDEX: CV
 
 **** Downloading Org as an archive
   You can download Org latest release from Org’s website. In this case, make sure you set the load-path correctly in your Emacs init file:
