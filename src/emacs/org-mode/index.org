@@ -60,3 +60,5 @@ HTMLはZen Codingなどのお助け機能やLaTeXもEmacsではYaTeXなどのお
 * org-modeカテゴリ
 org-modeは巨大で、関連するパッケージも多いため小記事に分けます。
 #+include: include.inc
+
+$\sqrt{2}$

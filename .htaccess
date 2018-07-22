@@ -1,4 +1,9 @@
-ErrorDocument 404 /build/404.html
+AddDefaultCharset utf-8
+AddType "text/plain" org
+
+ErrorDocument 503 /archives/error/maintenance.html
+ErrorDocument 404 /archives/error/404.html
+DirectoryIndex index.html index.org
 
 SetEnvIf REDIRECT_HTTPS (.*) HTTPS=$1 
 <IfModule mod_rewrite.c>
@@ -7,7 +12,17 @@ RewriteCond %{ENV:HTTPS} !on
 RewriteRule .* https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L] 
 </IfModule>
 
+
+# temporary-maintenance
+# RewriteCond %{REQUEST_URI} !=/archives/error/maintenance.html
+# RewriteRule ^.*$ - [R=503,L]
+
+
 RewriteEngine on
-RewriteBase /
-# RewriteCond %{REQUEST_URI} !(^/build/)
-# RewriteRule ^(.*)$ build/$1 [R,L]
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}\.org -f
+RewriteRule ^(/src/.*)$ $1.org [L]
+
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}\.html -f
+RewriteRule ^(/archives/.*)$ $1.html [L]

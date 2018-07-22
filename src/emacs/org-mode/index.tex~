@@ -1,0 +1,98 @@
+% Created 2018-07-22 日 22:38
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{grffile}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\author{conao}
+\date{\textit{<2018-07-17 火 09:30>}}
+\title{Emacsを使う最大の理由！文書作成のすべてをorg-modeで記述しよう！}
+\hypersetup{
+ pdfauthor={conao},
+ pdftitle={Emacsを使う最大の理由！文書作成のすべてをorg-modeで記述しよう！},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 25.3.1 (Org mode 9.1.13)}, 
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+Emacsを使う理由は様々あると思いますが、私がEmacsを使う最大の理由は \textbf{org-modeが使えること} です。
+会議の議事録や、規約の編集、卒業論文まで全ての文書作成をorg-modeで行うことができます。
+
+\section{環境}
+\label{sec:orge7ca453}
+\begin{itemize}
+\item \href{../emacs/index.org}{Emacs - 25.3.1}
+\begin{itemize}
+\item \href{../use-package.org}{use-package - 2.4}
+\item org-mode - 9.1.13
+\end{itemize}
+\end{itemize}
+
+\section{はじめに}
+\label{sec:orgf30b2e7}
+org-modeで記述する利点としては、プレーンテキストで文書を作成するため \textbf{diffがみやすくなる} という点があります。
+最近ではWardのようなリッチ文書作成ソフトでもdiffを取りやすくなっているようですが、プレーンテキストにはかないません。
+git管理することで、その文書を \textbf{誰が}, \textbf{いつ} 書き換えたのか明白に管理できますし、巻き戻しも容易です。
+コミットメッセージを活用することで \textbf{なぜ} 書き換えたのかも管理できます。
+
+そうした「管理された文書」を思い通りの形式に \textbf{変換して出力} できます。
+例に挙げた会議の議事録や、規約の編集は所属していた交響楽団に関するものでした。
+もちろん団員はEmacsをインストールしていないため、純粋なプレーンテキストとしてのorg-modeは理解しづらいですが、
+\textbf{HTMLに出力して印刷し配布} しましたし、後輩には \textbf{Word形式} で引き継ぐことができました。
+
+卒業論文はもちろん \textbf{\LaTeX{}} での提出が求められます。この要求に対してもorg-modeは十二分に応えてくれます。
+なぜならorg-modeの文法は簡潔で \textbf{執筆に集中できる} 上に、 \textbf{編集のためのお助け機能} をorg-modeが提供してくれているからです。
+
+ここだけの話ですが、HTMLや\LaTeX{}は \textbf{人間が書くものじゃない} と個人的に考えています。
+HTMLはZen Codingなどのお助け機能や\LaTeX{}もEmacsではYaTeXなどのお助け機能がありますが、根本的に \textbf{人間が書くフォーマットじゃない} んです。
+
+その点org-modeを使えば執筆に集中でき、難しい構造を隠してくれる上に、 \textbf{多彩なフォーマットに出力} できるのです。
+もう人類はHTMLタグや\LaTeX{}環境、通常マークダウンとQiita記法やはてな記法の違いなどに頭を悩ますことはないのです。
+なぜならorg-mode記法で一回書けば全て変換できるからです！
+
+ちょっと話が大きくなりましたが、本心です。そして私がorg-modeに出会ったときの衝撃です。
+ちなみにEmacsは気難しいやつで当時何度も挫折していた頃でしたが、 \textbf{org-modeを使うため} にEmacsと仲良くなって
+今ではEmacsで全てのプログラミング、文書作成を行っています笑
+\section{インストール}
+\label{sec:orgc325b7f}
+\begin{verbatim}
+(require 'package)
+(when (not (package-installed-p 'use-package))
+  (package-refresh-contents)
+  (package-install 'use-package))
+(use-package org :ensure t :defer t
+  :bind (("C-c o l" . org-store-link)
+	 ("C-c o a" . org-agenda)
+	 ("C-c o c" . org-capture)
+	 ("C-c o b" . org-iswitchb))
+  :config
+  (setq org-src-window-setup     'other-window
+	org-use-sub-superscripts '{}))
+\end{verbatim}
+\captionof{figure}{\label{org8bd2895}
+org-modeのインストール}
+上記はgithubで\href{https://github.com/conao/dotfiles}{公開}してる.emacs.dからの抜粋です。
+\texttt{"use-package org"} と検索して実際のコードを見てみるといいかも知れません。
+\section{org-modeカテゴリ}
+\label{sec:orgac944de}
+org-modeは巨大で、関連するパッケージも多いため小記事に分けます。
+\begin{itemize}
+\item \href{./basis-syntax.org}{org-mode基本文法}
+\end{itemize}
+
+\(\sqrt{2}\)
+\end{document}

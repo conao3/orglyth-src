@@ -1,1 +1,13 @@
-#+title
+#+title: 今日の実験ノート
+#+author: conao
+#+date: <2018-07-22 Sun 02:47>
+#+tags: profile
+
+# history
+# <2018-07-22 Sun 02:47> - first draft
+
+- コンテンツ
+  - [[./archives/emacs][emacs]]
+  - [[./archives/profile][profile]]
+
+

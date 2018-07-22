@@ -1,12 +1,11 @@
 #+TITLE: Sitemap!!
 
 - [[file:theindex.org][Index]]
-- [[file:summary.org][intro]]
-- org 2
-  - [[file:org 2/installation.org][Installation]]
-  - [[file:org 2/summary.org][intro]]
-  - [[file:org 2/index.org][intro]]
-- org
-  - [[file:org/installation.org][Installation]]
-  - [[file:org/summary.org][intro]]
-  - [[file:org/index.org][intro]]
+- emacs
+  - [[file:emacs/install.org][Emacsのインストール方法。Mac, Ubuntu, Windows対応！]]
+  - [[file:emacs/index.org][Emacsのインストール方法と挫折しないための便利な機能つまみ食い]]
+  - org-mode
+    - [[file:emacs/org-mode/index.org][Emacsを使う最大の理由！文書作成のすべてをorg-modeで記述しよう！]]
+    - [[file:emacs/org-mode/basis-syntax.org][Emacsを使う最大の理由！文書作成のすべてをorg-modeで記述しよう！org-mode基本文法]]
+- profile
+  - [[file:profile/versions.org][Conaoが使用しているソフトウェアバージョンの変遷一覧]]
