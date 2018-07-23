@@ -1,0 +1,166 @@
+#+title: org-list
+#+subtitle: lisp式をorg記法に変換する
+#+author: conao
+#+date: <2018-07-23 Mon 14:26>
+
+# history
+# <2018-07-23 Mon 14:26> first-draft
+
+org-modeにはorg-list.elというファイルが標準添付されています。
+
+org記法とlisp式の変換などをサポートしており、可能性の多い関数群だと思います。
+* org-list-to関数群
+** org-list-to-org
+#+BEGIN_SRC elisp -n
+  (defun org-list-to-org (list &optional params)
+    "Convert LIST into an Org plain list.
+  LIST is as returned by `org-list-parse-list'.  PARAMS is a property list
+  with overruling parameters for `org-list-to-generic'."
+    (let* ((make-item
+        (lambda (type _depth &optional c)
+          (concat (if (eq type 'ordered) "1. " "- ")
+              (and c (format "[@%d] " c)))))
+       (defaults
+         (list :istart make-item
+           :icount make-item
+           :ifmt (lambda (_type contents)
+               (replace-regexp-in-string "\n" "\n  " contents))
+           :dtend " :: "
+           :cbon "[X] "
+           :cboff "[ ] "
+           :cbtrans "[-] ")))
+      (org-list-to-generic list (org-combine-plists defaults params))))
+#+END_SRC
+
+=org-list-to-org= はlispのlistをorg記法でのリストに変換します。
+#+BEGIN_SRC elisp
+  (org-list-to-org '("a" ("b" "c")))
+  "- b
+    c"
+
+  (org-list-to-org '("org-1" ("a" "b")
+                     ("c"
+                      ("org-2" ("d" "e")))))
+  "- a
+    b
+  - c
+    - d
+      e"
+#+END_SRC
+** org-list-to-subtree
+#+BEGIN_SRC elisp -n
+  (defun org-list-to-subtree (list &optional params)
+    "Convert LIST into an Org subtree.
+  LIST is as returned by `org-list-to-lisp'.  PARAMS is a property
+  list with overruling parameters for `org-list-to-generic'."
+    (let* ((blank (pcase (cdr (assq 'heading org-blank-before-new-entry))
+            (`t t)
+            (`auto (save-excursion
+                 (org-with-limited-levels (outline-previous-heading))
+                 (org-previous-line-empty-p)))))
+       (level (org-reduced-level (or (org-current-level) 0)))
+       (make-stars
+        (lambda (_type depth &optional _count)
+          ;; Return the string for the heading, depending on DEPTH
+          ;; of current sub-list.
+          (let ((oddeven-level (+ level depth)))
+            (concat (make-string (if org-odd-levels-only
+                         (1- (* 2 oddeven-level))
+                       oddeven-level)
+                     ?*)
+                " ")))))
+      (org-list-to-generic
+       list
+       (org-combine-plists
+        (list :splice t
+          :istart make-stars
+          :icount make-stars
+          :dtstart " " :dtend " "
+          :isep (if blank "\n\n" "\n")
+          :cbon "DONE " :cboff "TODO " :cbtrans "TODO ")
+        params))))
+#+END_SRC
+
+=org-list-to-subtree= はlispのlistをorg記法でのリストに変換します。
+#+BEGIN_SRC elisp
+  (org-list-to-subtree '("a" ("b" "c")))
+  "* b
+  c"
+
+  (org-list-to-subtree '("org-1" ("a" "b")
+                     ("c"
+                      ("org-2" ("d" "e")))))
+  "* a
+  b
+  ,* c
+  ,** d
+  e"
+#+END_SRC
+** その他
+- =org-list-to-latex=
+  #+BEGIN_SRC elisp
+    (org-list-to-latex '("a" ("b" "c")))
+    "\\begin{itemize}
+    \\item b
+    c
+    \\end{itemize}"
+
+    (org-list-to-latex '("org-1" ("a" "b")
+                       ("c"
+                        ("org-2" ("d" "e")))))
+    "\\begin{itemize}
+    \\item a
+    b
+    \\item c
+    \\begin{itemize}
+    \\item d
+    e
+    \\end{itemize}
+    \\end{itemize}"
+  #+END_SRC
+- =org-list-to-html=
+  #+BEGIN_SRC elisp
+    (org-list-to-html '("a" ("b" "c")))
+    "<ul class=\"org-ul\">
+    <li>b
+    c</li>
+    </ul>"
+
+    (org-list-to-html '("org-1" ("a" "b")
+                       ("c"
+                        ("org-2" ("d" "e")))))
+    "<ul class=\"org-ul\">
+    <li>a
+    b</li>
+    <li>c
+    <ul class=\"org-ul\">
+    <li>d
+    e</li>
+    </ul></li>
+    </ul>"
+  #+END_SRC
+- =org-list-to-texinfo=
+  #+BEGIN_SRC elisp
+    (org-list-to-texinfo '("a" ("b" "c")))
+    "@itemize
+    @item
+    b
+    c
+    @end itemize"
+
+    (org-list-to-texinfo '("org-1" ("a" "b")
+                       ("c"
+                        ("org-2" ("d" "e")))))
+    "@itemize
+    @item
+    a
+    b
+    @item
+    c
+    @itemize
+    @item
+    d
+    e
+    @end itemize
+    @end itemize"
+  #+END_SRC
