@@ -29,5 +29,5 @@ Temporary Items
 
 # export files
 index.html
-/src/*/*.html
+/src/**/*.html
 /archives/
