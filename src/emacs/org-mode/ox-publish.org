@@ -1,0 +1,200 @@
+#+title: ox-publish.el
+#+subtitle: publish-projectでエクスポートされるまで
+#+author: conao
+#+date: <2018-07-23 Mon 16:20>
+
+# history
+# <2018-07-23 Mon 16:20> first-draft
+
+このブログはorg-mode標準添付のox-publish.elにてorg文書をエクスポートして
+htmlファイルを作成しています。
+
+ブログ用にカスタマイズするとき調べたときの備忘録を記しておきます。
+
+* =org-publish-project-alist= の設定
+=org-publish-project-alist= にてprojectを設定します。
+
+projectの設定方法は[[http://technohabits.blogspot.com/2013/01/org-modepublishingweb.html][org-modeのpublishingを使ってWebサイト構築]]や
+[[https://orgmode.org/manual/Publishing.html#Publishing][org-mode]]のヘルプが参考になります。
+
+またこの記事の集大成として[[https://github.com/conao/orglyth/blob/master/orglyth-html.el][orglyth-html.el]]を作成したので、参考になれば幸いです。
+
+またalistの変更をするので、基本的には =add-to-list= による追加を行い、
+以前のデータを保持した上で追加を行う方が良いのですが、
+デバック段階では =setq= による上書きも有用なのは確かなので、
+サンプルコードでは =setq= を使用します。
+** =org-publish-project-alist=
+=org-publish-project-alist= はプロジェクトと、それをまとめるメタプロジェクトからなるリストです。
+
+プロジェクトは下記形式です。
+#+BEGIN_SRC elisp
+  ("project-name"
+   :property value 
+   :property value ...)
+#+END_SRC
+
+メタプロジェクトは下記形式です。
+#+BEGIN_SRC elisp
+  ("project-name" :components ("project-name" "project-name" ...))
+#+END_SRC
+
+つまり最終的にはこういう形になります。
+
+#+BEGIN_SRC elisp
+  (("project-name"
+    :property value
+    :property value ...)
+
+   ("project-name" :components ("project-name" "project-name" ...)))
+#+END_SRC
+
+関連するプロパティをどんどん追加していって、プロジェクトを作り関連するプロジェクトがあれば
+まとめて実行できるようにするのが、このalistの目的です。
+** ソースとエクスポートの設定
+プロジェクトには必須のプロパティがあり、説明と設定例が以下になります。
+| :base-directory       | string   | ソースファイルを探す起点のパス |
+| :publishing-directory | string   | エクスポートする起点のパス     |
+| :publishing-function  | function | ファイルに作用させる関数       |
+
+#+BEGIN_SRC elisp
+  (setq org-publish-project-alist
+        '(("org"
+           :base-directory "~/org/"
+           :publishing-directory "~/public_html/"
+           :publishing-function org-html-publish-to-html)))
+#+END_SRC
+
+=:publishing-function= は以下が用意されている。
+| =org-latex-publish-to-pdf= | orgファイルを受け取ってpdfを作成する   |
+| =org-html-publish-to-html= | orgファイルを受け取ってhtmlを作成する  |
+| =org-publish-attachment=   | ファイルを受け取ってそのままコピーする |
+
+(plist, filename, pubdir)を受け取る関数なら自作しても良い。
+参考として =org-html-publish-to-html= と =org-publish-attachment= のソースを添付する。
+
+#+BEGIN_SRC elisp
+  (defun org-html-publish-to-html (plist filename pub-dir)
+    "Publish an org file to HTML.
+
+  FILENAME is the filename of the Org file to be published.  PLIST
+  is the property list for the given project.  PUB-DIR is the
+  publishing directory.
+
+  Return output file name."
+    (org-publish-org-to 'html filename
+                (concat "." (or (plist-get plist :html-extension)
+                        org-html-extension
+                        "html"))
+                plist pub-dir))
+
+  (defun org-publish-attachment (_plist filename pub-dir)
+    "Publish a file with no transformation of any kind.
+
+  FILENAME is the filename of the Org file to be published.  PLIST
+  is the property list for the given project.  PUB-DIR is the
+  publishing directory.
+
+  Return output file name."
+    (unless (file-directory-p pub-dir)
+      (make-directory pub-dir t))
+    (let ((output (expand-file-name (file-name-nondirectory filename) pub-dir)))
+      (unless (file-equal-p (expand-file-name (file-name-directory filename))
+                (file-name-as-directory (expand-file-name pub-dir)))
+        (copy-file filename output t))
+      ;; Return file name.
+      output))
+#+END_SRC
+
+ちなみにこれらの関数は =org-publish-file= 内で、対象ファイルごとに呼ばれる。
+
+ソースから分かったが、 =:publishing-function= はfunctionのリストにしてもよく、
+(f1 f2) が与えられた場合、すべてのファイルをf1に作用させた後、f2が作用することになる。
+#+BEGIN_SRC elisp
+  (defun org-publish-file (filename &optional project no-cache)
+    "Publish file FILENAME from PROJECT.
+  If NO-CACHE is not nil, do not initialize `org-publish-cache'.
+  This is needed, since this function is used to publish single
+  files, when entire projects are published (see
+  `org-publish-projects')."
+    (let* ((project             (or project (org-publish-get-project-from-filename filename)
+                                    (user-error "File %S is not part of any known project"
+                                                (abbreviate-file-name filename))))
+           (project-plist       (cdr project))
+           (publishing-function (pcase (org-publish-property :publishing-function project)
+                                  (`nil (user-error "No publishing function chosen"))
+                                  ((and f (pred listp)) f)
+                                  (f (list f))))
+           (base-dir            (file-name-as-directory
+                                 (or (org-publish-property :base-directory project)
+                                     (user-error "Project %S does not have :base-directory defined"
+                                                 (car project)))))
+           (pub-base-dir        (file-name-as-directory
+                                 (or (org-publish-property :publishing-directory project)
+                                     (user-error
+                                      "Project %S does not have :publishing-directory defined"
+                                      (car project)))))
+           (pub-dir             (file-name-directory
+                                 (expand-file-name (file-relative-name filename base-dir)
+                                                   pub-base-dir))))
+
+      (unless no-cache (org-publish-initialize-cache (car project)))
+
+      ;; Allow chain of publishing functions.
+      (dolist (f publishing-function)
+        (when (org-publish-needed-p filename pub-base-dir f pub-dir base-dir)
+          (let ((output (funcall f project-plist filename pub-dir)))
+            (org-publish-update-timestamp filename pub-base-dir f base-dir)
+            (run-hook-with-args 'org-publish-after-publishing-hook
+                                filename
+                                output))))
+      ;; Make sure to write cache to file after successfully publishing
+      ;; a file, so as to minimize impact of a publishing failure.
+      (org-publish-write-cache-file)))
+#+END_SRC
+** 
+
+| :preparation-funciton |          |                                |
+| :completion-function  |          |                                |
+
+
+#+BEGIN_SRC elisp
+  (defun org-publish-org-to (backend filename extension plist &optional pub-dir)
+    "Publish an Org file to a specified back-end.
+
+  BACKEND is a symbol representing the back-end used for
+  transcoding.  FILENAME is the filename of the Org file to be
+  published.  EXTENSION is the extension used for the output
+  string, with the leading dot.  PLIST is the property list for the
+  given project.
+
+  Optional argument PUB-DIR, when non-nil is the publishing
+  directory.
+
+  Return output file name."
+    (unless (or (not pub-dir) (file-exists-p pub-dir)) (make-directory pub-dir t))
+    ;; Check if a buffer visiting FILENAME is already open.
+    (let* ((org-inhibit-startup t)
+           (visiting (find-buffer-visiting filename))
+           (work-buffer (or visiting (find-file-noselect filename))))
+      (unwind-protect
+          (with-current-buffer work-buffer
+            (let ((output (org-export-output-file-name extension nil pub-dir)))
+              (org-export-to-file backend output
+                nil nil nil (plist-get plist :body-only)
+                ;; Add `org-publish--store-crossrefs' and
+                ;; `org-publish-collect-index' to final output filters.
+                ;; The latter isn't dependent on `:makeindex', since we
+                ;; want to keep it up-to-date in cache anyway.
+                (org-combine-plists
+                 plist
+                 `(:crossrefs
+                   ,(org-publish-cache-get-file-property
+                     ;; Normalize file names in cache.
+                     (file-truename filename) :crossrefs nil t)
+                   :filter-final-output
+                   (org-publish--store-crossrefs
+                    org-publish-collect-index
+                    ,@(plist-get plist :filter-final-output)))))))
+        ;; Remove opened buffer in the process.
+        (unless visiting (kill-buffer work-buffer)))))
+#+END_SRC
