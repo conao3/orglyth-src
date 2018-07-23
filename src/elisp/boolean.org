@@ -1,0 +1,42 @@
+#+title: elispにおける条件分岐、真偽値
+#+date: <2018-07-18 Wed 12:51>
+#+tags: emacs, elisp, boolean
+
+elispにももちろん制御構造があり、どんな値が真だと判定されるかは重要になります。
+また真偽値を返す関数についても扱います。
+
+* t, nil
+一般のプログラミング言語の =true= / =false= に対応するシンボルが =t= / =nil= です。
+
+また =nil= には空リストという意味があり、()を評価すると =nil= になります。
+
+#+BEGIN_SRC elisp
+  nil                                     ; => nil
+  ()                                      ; => nil
+  '()                                     ; => nil
+#+END_SRC
+
+ここで =src/eval.c= (emacsソース内)より =if= のソースを引用します。
+
+#+BEGIN_SRC c
+  DEFUN ("if", Fif, Sif, 2, UNEVALLED, 0,
+         doc: /* If COND yields non-nil, do THEN, else do ELSE...
+  Returns the value of THEN or the value of the last of the ELSE's.
+  THEN must be one expression, but ELSE... can be zero or more expressions.
+  If COND yields nil, and there are no ELSE's, the value is nil.
+  usage: (if COND THEN ELSE...)  */)
+    (Lisp_Object args)
+  {
+    Lisp_Object cond;
+
+    cond = eval_sub (XCAR (args));                // argsの1要素目を取り出して実行する
+
+    if (!NILP (cond))                             // 組み込み関数NILP
+      return eval_sub (Fcar (XCDR (args)));
+    return Fprogn (XCDR (XCDR (args)));
+  }
+#+END_SRC
+
+これを見れば明らかなように、elispの =if= はc言語の =if= を呼んでおり、判定は =NILP= によってなされています。
+つまり明示的に =t= というシンボルがありますが、 =nil= ではないものは全て =t= として扱われることがわかります。
+* 
