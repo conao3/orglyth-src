@@ -28,5 +28,6 @@ Temporary Items
 .apdisk
 
 # export files
+index.html
 /src/*/*.html
 /archives/
