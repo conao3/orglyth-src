@@ -1,0 +1,183 @@
+#+title:Emacs Lisp: nadviceとはなにか
+#+date:2014-10-25 15:00:00
+
+(LISP Library 365参加エントリ)
+
+　LISP Library 365 の299日目です。
+
+　Emacs Lisp: nadviceは、
+
+パッケージ情報
+パッケージ名	Emacs Lisp: nadvice
+Emacs Lispマニュアル	Advising Functions - GNU Emacs Lisp Reference Manual
+インストール方法
+　Emacs 24.4から使える機能で、nadvice.elで定義されています。
+
+試してみる
+　これまで色々な処理系でアドバイス機構を紹介してきましたが、今回も同様に、
+
+(defun matu (x)
+  (princ (format ">>%s<<\n" x))
+  nil)     
+
+(matu 8)
+;>> >>8<<
+;=> nil
+
+のような関数があったとすると、
+
+;>> around1 ==>
+;>> around0 ==>
+;>> before1:
+;>> before0:
+;>> >>8<<
+;>> after0: 
+;>> after1: 
+;>> around0 <== 
+;>> around1 <== 
+;=> NIL
+のような結果を得るには、
+
+(defun matu-around0 (f &rest args)
+  (prog2
+    (princ "around0 ==>\n")
+    (apply f args)
+    (princ "around0 <==\n")))
+
+(defun matu-around1 (f &rest args)
+  (prog2
+    (princ "around1 ==>\n")
+    (apply f args)
+    (princ "around1 <==\n")))
+
+
+(defun matu-before0 (&rest args)
+  (princ "before0:\n"))
+
+
+(defun matu-before1 (&rest args)
+  (princ "before1:\n"))
+
+
+(defun matu-after0 (&rest args)
+  (princ "after0:\n"))
+
+
+(defun matu-after1 (&rest args)
+  (princ "after1:\n"))
+
+
+(advice-add 'matu :before #'matu-before0)
+(advice-add 'matu :before #'matu-before1)
+(advice-add 'matu :after #'matu-after0)
+(advice-add 'matu :after #'matu-after1)
+(advice-add 'matu :around #'matu-around0)
+(advice-add 'matu :around #'matu-around1)
+
+こんな感じの定義と定義順になります。定義順に内側から外側へ付加されていきますが、オプションのalistのdepth属性で制御することが可能です。-100から100までで-100が最も外側とのこと。デフォルトは0。
+ということで上記を定義順は関係なく同様の構成にしたい場合は、
+
+(advice-add 'matu :around #'matu-around0 '((depth . -2)))
+(advice-add 'matu :around #'matu-around1 '((depth . -2)))
+(advice-add 'matu :before #'matu-before0 '((depth . 0)))
+(advice-add 'matu :before #'matu-before1 '((depth . -1)))
+(advice-add 'matu :after #'matu-after0 '((depth . 0)))
+(advice-add 'matu :after #'matu-after1 '((depth . -1)))
+のようになるかと思います。
+アドバイスの削除は、advice-removeで
+
+(advice-remove 'matu #'matu-around1)
+のようにしますが、名前付き関数を指定していることから分かるように無名関数でアドバイスを付けてしまうと取り外しが面倒なことになります。
+
+before/after/around以外の仲間達
+　定番のbefore/after/around以外にも7つ程パタンが増えたみたいです。
+どういう挙動になるかは、add-functionのドキュメンテーションストリングを読む方が早いかもしれませんが、
+
+`:before'	(lambda (&rest r) (apply FUNCTION r) (apply OLDFUN r))
+`:after'	(lambda (&rest r) (prog1 (apply OLDFUN r) (apply FUNCTION r)))
+`:around'	(lambda (&rest r) (apply FUNCTION OLDFUN r))
+`:override'	(lambda (&rest r) (apply FUNCTION r))
+`:before-while'	(lambda (&rest r) (and (apply FUNCTION r) (apply OLDFUN r)))
+`:before-until'	(lambda (&rest r) (or  (apply FUNCTION r) (apply OLDFUN r)))
+`:after-while'	(lambda (&rest r) (and (apply OLDFUN r) (apply FUNCTION r)))
+`:after-until'	(lambda (&rest r) (or  (apply OLDFUN r) (apply FUNCTION r)))
+`:filter-args'	(lambda (&rest r) (apply OLDFUN (funcall FUNCTION r)))
+`:filter-return'(lambda (&rest r) (funcall FUNCTION (apply OLDFUN r)))
+適当に試してみると下記のような感じです。
+
+(defun foo (n) n)
+
+(list (foo 0) (foo 42))
+;=> (0 42)
+
+(advice-add 'foo :override #'zerop)
+
+
+(list (foo 0) (foo 42))
+;=> (t nil)
+
+(advice-remove 'foo #'zerop)
+
+
+(advice-add 'foo :before-while #'zerop)
+;=> nil
+
+(list (foo 0) (foo 42))
+;=> (0 nil)
+
+(advice-remove 'foo #'zerop)
+;=> nil
+
+(advice-add 'foo :before-until #'zerop)
+;=> nil
+
+(list (foo 0) (foo 42))
+;=> (t 42)
+
+(advice-remove 'foo #'zerop)
+;=> nil
+
+(advice-add 'foo :after-while #'zerop)
+;=> nil
+
+(list (foo 0) (foo 42))
+;=> (t nil)
+
+(advice-remove 'foo #'zerop)
+;=> nil
+
+(advice-add 'foo :after-until #'zerop)
+;=> nil
+
+(list (foo 0) (foo 42))
+;=> (0 42)
+
+(advice-remove 'foo #'zerop)
+;=> nil
+
+(advice-add 'foo :filter-return #'1+)
+;=> nil
+
+(foo 1)
+;=> 2
+
+(defun bar (&rest args)
+  (length args))
+
+
+(bar 1 2 3)
+;=> 3
+
+(advice-add 'bar :filter-args #'print)
+
+
+(bar 1 2 3)
+;>> (1 2 3)
+;=> 3
+
+メソッド結合でいうとandやorみたいなものが追加された感じですね。
+ちなみにadvice-add、advice-removeは、それぞれよりプリミティブなadd-function、remove-functionを呼び出しています。これらの詳細はマニュアルを参照してください。
+
+まとめ
+　今回は、Emacs Lisp: nadviceを紹介してみました。
+新しい方式は、普通の関数呼び出しの合成という感じなので、馴染み易いかもしれないですね。
