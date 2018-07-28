@@ -27,6 +27,9 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+# site map file
+sitemap.inc
+
 # export files
 index.html
 /src/**/*.html
