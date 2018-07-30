@@ -1,0 +1,20 @@
+#+title: エクスポートオプション取得
+#+subtitle: org-modeのエクスポートオプションの取得方法
+#+author: conao
+#+date: <2018-07-30 Mon 16:37>
+
+# history
+#
+# <2018-07-30 Mon 16:37> first draft
+
+#+BEGIN_SRC elisp
+  (org-with-point-at (point-min)
+    (catch :found
+      (let ((case-fold-search t))
+        (while (re-search-forward
+                "^[ \t]*#\\+EXPORT_FILE_NAME:[ \t]+\\S-" nil t)
+          (let ((element (org-element-at-point)))
+            (when (eq 'keyword (org-element-type element))
+              (throw :found
+                     (org-element-property :value element))))))))
+#+END_SRC

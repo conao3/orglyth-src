@@ -1,0 +1,47 @@
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013) (format=pdflatex 2018.5.11)  28 JUL 2018 23:44
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**install.tex
+(.//install.tex
+LaTeX2e <2011/06/27>
+Babel <3.9k> and hyphenation patterns for 78 languages loaded.
+
+(/Applications/TeXLive/Library/texlive/2013/texmf-dist/tex/latex/base/article.c
+ls
+Document Class: article 2007/10/19 v1.4h Standard LaTeX document class
+
+(/Applications/TeXLive/Library/texlive/2013/texmf-dist/tex/latex/base/size11.cl
+o
+File: size11.clo 2007/10/19 v1.4h Standard LaTeX file (size option)
+)
+\c@part=\count79
+\c@section=\count80
+\c@subsection=\count81
+\c@subsubsection=\count82
+\c@paragraph=\count83
+\c@subparagraph=\count84
+\c@figure=\count85
+\c@table=\count86
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+
+! Interruption.
+l.552 
+      \newcommand*\l@subparagraph{\@dottedtocline{5}{10em}{5em}}
+? 
+! Emergency stop.
+l.552 
+      \newcommand*\l@subparagraph{\@dottedtocline{5}{10em}{5em}}
+End of file on the terminal!
+
+ 
+Here is how much of TeX's memory you used:
+ 179 strings out of 493308
+ 2005 string characters out of 6129386
+ 52434 words of memory out of 5000000
+ 3729 multiletter control sequences out of 15000+600000
+ 3940 words of font info for 15 fonts, out of 8000000 for 9000
+ 957 hyphenation exceptions out of 8191
+ 21i,0n,19p,165b,36s stack positions out of 5000i,500n,10000p,200000b,80000s
+!  ==> Fatal error occurred, no output PDF file produced!

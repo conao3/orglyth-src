@@ -1,0 +1,89 @@
+% Created 2018-07-28 Sat 23:44
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{grffile}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\author{Naoya Yamashita}
+\date{\textit{<2018-07-17 Tue 17:48>}}
+\title{Emacsのインストール方法。Mac, Ubuntu, Windows対応！}
+\hypersetup{
+ pdfauthor={Naoya Yamashita},
+ pdftitle={Emacsのインストール方法。Mac, Ubuntu, Windows対応！},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 25.3.1 (Org mode 9.1.13)}, 
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+Emacsにはいろいろなパッチを当ててる人がいて、それぞれに異なるバイナリが生成されます。
+
+インストールで躓くと何もやる気が起きなくなってしまうので、私がいつも使ってる方法を紹介します。
+\section{Mac}
+\label{sec:orgb57ff47}
+Macでは\href{https://nrid.nii.ac.jp/ja/nrid/1000000291295/}{山本先生}のパッチを当てたEmacs-Mac-Port(EMP)版のEmacsを使用しています。
+\begin{itemize}
+\item brew
+
+brewでは\href{https://github.com/railwaycat}{railwaycat}さんが扱いやすいようにラッパを\href{https://github.com/railwaycat/homebrew-emacsmacport}{書かれています}ので、下記でインストールできます。
+\begin{verbatim}
+brew tap railwaycat/emacsmacport
+brew cask install emacs-mac
+\end{verbatim}
+\item 野良ビルド
+
+私は自分でビルドしています。自分でビルドする最大の利点は \textbf{複数バージョンのバイナリを持てる} ことです。
+Emacsは環境であり、Emacsに依存している我々は、メジャーアップデートをインストールすると丸1日なくなります（汗
+
+Emacsメンテナさんやパッケージ開発者さんも気をつけられてはいますが、変数がなくなったり名前が変わったりで結構トラブルが起きます。
+そんな中これまでの環境を上書きしてしまうと何もできなくなってしまいます。。
+
+私はホームディレクトリのDocumentsフォルダにemacs-<version>フォルダを作成し、
+下記のシェルスクリプトを配置し、実行してバイナリを作成しています。
+\begin{itemize}
+\item \href{https://gist.github.com/conao/5529d711a97a8062e4e9298456834be3}{emacs-build-24.5.sh}
+\item \href{https://gist.github.com/conao/139179f8d7fead3e53508a8b13fbfc9f}{emacs-build-25.3.sh}
+\item \href{https://gist.github.com/conao/38ee583916857f0a69bc3f4137dbd5cf}{emacs-build-26.1.sh}
+\end{itemize}
+emacs-mac-build内に.appができるので、起動してみて問題がなければ/Applicationsにコピーします。
+
+\begin{verbatim}
+180-240:~/Documents/emacs-26.1 conao$ ./install-emacs.sh 
+...
+...
+checking for library containing inflateEnd... -lz
+configure: error: The following required libraries were not found:
+     gnutls
+Maybe some development libraries/packages are missing?
+If you don't want to link with them give
+     --with-gnutls=no
+as options to configure
+\end{verbatim}
+
+上記のようなエラーが出た場合 \texttt{gnutls} がないということなので、 \texttt{brew install gnutls} してあげます。
+このように問題が起こった場合自分で対処しないといけないので、慣れないと大変かもしれません。
+\end{itemize}
+\section{Ubuntu}
+\label{sec:orgc1e5157}
+Ubuntuではapt-getでよしなにいれます。 \texttt{sudo apt-get install emacs} ではどんなバージョンがインストールされるかわからないので、
+\texttt{apt-cache search emacs} を実行して自分がほしいemacsをインスールします。
+\section{Windows}
+\label{sec:org66e04b0}
+Windowsでは\href{https://ja.osdn.net/projects/gnupack/}{gnupack}が好きです。(一番最初に使ったので。)
+最新版をダウンロードして展開するだけでEmacsやいろいろなCUIソフトを使えるようになります。
+
+現在は改善されているかも知れませんが、日本語パスと相性が悪いので、Cドライブ直下に展開してリンクをデスクトップにはるといいと思います。
+\end{document}
