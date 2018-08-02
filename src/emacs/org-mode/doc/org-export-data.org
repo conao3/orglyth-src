@@ -1,0 +1,107 @@
+#+BEGIN_SRC elisp -n
+  (defun org-export-data (data info)
+    "Convert DATA into current back-end format.
+
+  DATA is a parse tree, an element or an object or a secondary
+  string.  INFO is a plist holding export options.
+
+  Return a string."
+    (or (gethash data (plist-get info :exported-data))
+        ;; Handle broken links according to
+        ;; `org-export-with-broken-links'.
+        (cl-macrolet
+            ((broken-link-handler
+              (&rest body)
+              `(condition-case err
+                   (progn ,@body)
+                 (org-link-broken
+                  (pcase (plist-get info :with-broken-links)
+                    (`nil (user-error "Unable to resolve link: %S" (nth 1 err)))
+                    (`mark (org-export-data
+                            (format "[BROKEN LINK: %s]" (nth 1 err)) info))
+                    (_ nil))))))
+          (let* ((type (org-element-type data))
+                 (parent (org-export-get-parent data))
+                 (results
+                  (cond
+                   ;; Ignored element/object.
+                   ((memq data (plist-get info :ignore-list)) nil)
+                   ;; Plain text.
+                   ((eq type 'plain-text)
+                    (org-export-filter-apply-functions
+                     (plist-get info :filter-plain-text)
+                     (let ((transcoder (org-export-transcoder data info)))
+                       (if transcoder (funcall transcoder data info) data))
+                     info))
+                   ;; Secondary string.
+                   ((not type)
+                    (mapconcat (lambda (obj) (org-export-data obj info)) data ""))
+                   ;; Element/Object without contents or, as a special
+                   ;; case, headline with archive tag and archived trees
+                   ;; restricted to title only.
+                   ((or (not (org-element-contents data))
+                        (and (eq type 'headline)
+                             (eq (plist-get info :with-archived-trees) 'headline)
+                             (org-element-property :archivedp data)))
+                    (let ((transcoder (org-export-transcoder data info)))
+                      (or (and (functionp transcoder)
+                               (broken-link-handler
+                                (funcall transcoder data nil info)))
+                          ;; Export snippets never return a nil value so
+                          ;; that white spaces following them are never
+                          ;; ignored.
+                          (and (eq type 'export-snippet) ""))))
+                   ;; Element/Object with contents.
+                   (t
+                    (let ((transcoder (org-export-transcoder data info)))
+                      (when transcoder
+                        (let* ((greaterp (memq type org-element-greater-elements))
+                               (objectp
+                                (and (not greaterp)
+                                     (memq type org-element-recursive-objects)))
+                               (contents
+                                (mapconcat
+                                 (lambda (element) (org-export-data element info))
+                                 (org-element-contents
+                                  (if (or greaterp objectp) data
+                                    ;; Elements directly containing
+                                    ;; objects must have their indentation
+                                    ;; normalized first.
+                                    (org-element-normalize-contents
+                                     data
+                                     ;; When normalizing contents of the
+                                     ;; first paragraph in an item or
+                                     ;; a footnote definition, ignore
+                                     ;; first line's indentation: there is
+                                     ;; none and it might be misleading.
+                                     (when (eq type 'paragraph)
+                                       (and
+                                        (eq (car (org-element-contents parent))
+                                            data)
+                                        (memq (org-element-type parent)
+                                              '(footnote-definition item)))))))
+                                 "")))
+                          (broken-link-handler
+                           (funcall transcoder data
+                                    (if (not greaterp) contents
+                                      (org-element-normalize-string contents))
+                                    info)))))))))
+            ;; Final result will be memoized before being returned.
+            (puthash
+             data
+             (cond
+              ((not results) "")
+              ((memq type '(org-data plain-text nil)) results)
+              ;; Append the same white space between elements or objects
+              ;; as in the original buffer, and call appropriate filters.
+              (t
+               (org-export-filter-apply-functions
+                (plist-get info (intern (format ":filter-%s" type)))
+                (let ((blank (or (org-element-property :post-blank data) 0)))
+                  (if (eq (org-element-class data parent) 'object)
+                      (concat results (make-string blank ?\s))
+                    (concat (org-element-normalize-string results)
+                            (make-string blank ?\n))))
+                info)))
+             (plist-get info :exported-data))))))
+#+END_SRC
