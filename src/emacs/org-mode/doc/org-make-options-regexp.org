@@ -1,0 +1,10 @@
+#+BEGIN_SRC elisp -n
+  (defun org-make-options-regexp (kwds &optional extra)
+    "Make a regular expression for keyword lines.
+  KWDS is a list of keywords, as strings.  Optional argument EXTRA,
+  when non-nil, is a regexp matching keywords names."
+    (concat "^[ \t]*#\\+\\("
+        (regexp-opt kwds)
+        (and extra (concat (and kwds "\\|") extra))
+        "\\):[ \t]*\\(.*\\)"))
+#+END_SRC
