@@ -1,0 +1,7 @@
+#+title: texinfo
+#+subtitle: texinfoを活用する
+#+author: conao
+#+date: <2018-08-04 Sat 05:36>
+
+* texinfoとは
+[[http://savannah.gnu.org/projects/texinfo/][texinfo]]とはGNUの公式ドキュメントシステムです。
