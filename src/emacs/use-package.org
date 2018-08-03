@@ -1,4 +1,4 @@
-#+title: use-package
+#+title: use-package.el
 #+subtitle: use-packageでモダンな.emacs設定を行う！
 #+author: conao
 #+date: <2018-08-04 Sat 04:45>
@@ -8,5 +8,322 @@
 # <2018-08-04 Sat 04:45> first-draft
 
 * use-packageとは
-* keyword
+[[https://github.com/jwiegley/use-package][use-package]]は[[https://github.com/jwiegley/use-package][jwiegley]]氏が作成されたパッケージ設定用マクロです。
 
+「コードを作成できるコード」であるlispの特徴を最大限に生かして、
+簡潔に、パッケージの設定を記述することができます。
+* インストール
+melpaからできます。
+
+#+BEGIN_EXAMPLE
+  M-x package-install use-package
+#+END_EXAMPLE
+* キーワード
+** キーワードなし
+キーワードなしでuse-packageを呼んだ場合、require文のみが展開されます。
+
+#+BEGIN_QUOTE
+#+BEGIN_SRC emacs-lisp :results code :exports both
+  (macroexpand '(use-package a))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(require 'a nil nil)
+#+END_SRC
+#+END_QUOTE
+** =:after= キーワード
+パッケージ =b= に依存しているパッケージ =a= はパッケージ =b= が読み込まれた後に読み込みたいです。
+
+伝統的には =eval-ater-load= を利用して設定しますが、 =after= キーワードにより設定できます。
+ 
+#+BEGIN_QUOTE
+#+BEGIN_SRC emacs-lisp :results code :exports both
+    (macroexpand '(use-package a
+                    :after b))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(eval-after-load 'b
+  '(require 'a nil nil))
+#+END_SRC
+#+END_QUOTE
+
+=after= キーワードはさらに =:all=, =:any= キーワードを含んだリストを受け取ることができ、
+より複雑な遅延読み込みの設定を行うことができます。
+
+次の例は =:after (:any (:all a b) (:all c d))= を与えており、 =foo= パッケージは
+=a= と =b= が2つとも読み込まれる、または =c= と =d= が2つとも読み込まれた後に読み込まれます。
+
+展開例を見ると分かる通り、 =use-package= により一時変数が展開されます。
+
+なお、 =:after (foo bar)= は =:after (:all foo bar)= と指定した結果と同等になります。
+#+BEGIN_QUOTE
+#+BEGIN_SRC emacs-lisp :results code :exports both
+  (macroexpand '(use-package foo
+                  :after (:any (:all a b) (:all c d))))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (defvar use-package--loaded238 nil)
+  (defvar use-package--result238 nil)
+  (defvar use-package--next238
+    #'(lambda nil
+        (if use-package--loaded238 use-package--result238
+          (setq use-package--loaded238 t use-package--result238
+                (require 'foo nil nil)))))
+  (eval-after-load 'b
+    '(eval-after-load 'a
+       '(funcall use-package--next238)))
+  (eval-after-load 'd
+    '(eval-after-load 'c
+       '(funcall use-package--next238))))
+#+END_SRC
+#+END_QUOTE
+** =bind=, =bind*= キーワード
+キーバインドの設定を行います。
+
+伝統的には =define-key= や =global-set-key= などが使われており、 =kbd= と組み合わせたり
+組み合わせなかったり、混乱が見られました。
+
+=use-package= はキーバインドの設定をラップし、分かりやすく簡潔な記法を提供します。
+
+なお、 =autoload= で展開されるので、起動時にはキーバインドの設定のみ行われ、
+実際にパッケージが読み込まれるのはキーバインドが実行されたときです。
+#+BEGIN_QUOTE
+#+BEGIN_SRC emacs-lisp :results code :exports both
+  (macroexpand '(use-package helm
+                  :bind (("M-x" . helm-M-x))))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (unless
+      (fboundp 'helm-M-x)
+    (autoload #'helm-M-x "helm" nil t))
+  (bind-keys :package helm
+             ("M-x" . helm-M-x)))
+#+END_SRC
+#+END_QUOTE
+
+以前はグローバルキーマップのみサポートされていましたが、
+マイナーモードのキーマップ割り当ても =bind= キーワードで出来るようになりました。
+
+次の例では =helm-M-x= と =helm-find-files= がグローバルマップに割り当てられ、
+=helm-occur= は =helm-command-map= に、
+=helm-execute-persistent-action= と =helm-select-action= は =helm-map= に割り当てられます。
+
+マップの指定は次のマップ指定が現れるまで有効です。
+#+BEGIN_QUOTE
+#+BEGIN_SRC emacs-lisp :results code :exports both
+  (macroexpand '(use-package helm
+                  :bind (("M-x"     . helm-M-x)
+                         ("C-x C-f" . helm-find-files)
+                         :map helm-command-map
+                         ("o"       . helm-occur)
+                         :map helm-map
+                         ("<tab>"   . helm-execute-persistent-action)
+                         ("C-z"     . helm-select-action))))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (unless
+      (fboundp 'helm-M-x)
+    (autoload #'helm-M-x "helm" nil t))
+  (unless
+      (fboundp 'helm-find-files)
+    (autoload #'helm-find-files "helm" nil t))
+  (unless
+      (fboundp 'helm-occur)
+    (autoload #'helm-occur "helm" nil t))
+  (unless
+      (fboundp 'helm-execute-persistent-action)
+    (autoload #'helm-execute-persistent-action "helm" nil t))
+  (unless
+      (fboundp 'helm-select-action)
+    (autoload #'helm-select-action "helm" nil t))
+  (bind-keys :package helm
+             ("M-x" . helm-M-x)
+             ("C-x C-f" . helm-find-files)
+             :map helm-command-map
+             ("o" . helm-occur)
+             :map helm-map
+             ("<tab>" . helm-execute-persistent-action)
+             ("C-z" . helm-select-action)))
+#+END_SRC
+#+END_QUOTE
+
+メジャーモードのキーマップの方が、グローバルキーマップより優先されるため、
+モードによっては =bind= で指定したキーバインドが動かない場合があります。
+
+しかし、Emacsにはメジャーモードよりマイナーモードのキーマップのほうが優先されるという仕様があるので、
+伝統的にはキーバインドのみを指定したマイナーモードを定義したりと、とても複雑な設定をすることを求められました。
+
+しかし =use-package= はその記法をうまくラップし、 =bind= キーワードを =bind*= キーワードに変更するだけで、
+上記の作業を行ってくれます。
+つまり、すべてのキーマップより優先されるマイナーモードを作り、そのマイナーモードにキーバインドを定義します。
+
+=bind*= においても =bind= と同じように =:map= キーワードを使用できます。
+#+BEGIN_QUOTE
+#+BEGIN_SRC emacs-lisp :results code :exports both
+  (macroexpand '(use-package other-window-or-split
+                  :init (el-get-bundle conao/other-window-or-split)
+                  :bind* (("C-t"   . ws-other-window-or-split)
+                          ("C-c j" . ws-adjust-windows-size))))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (unless
+      (fboundp 'ws-other-window-or-split)
+    (autoload #'ws-other-window-or-split "other-window-or-split" nil t))
+  (unless
+      (fboundp 'ws-adjust-windows-size)
+    (autoload #'ws-adjust-windows-size "other-window-or-split" nil t))
+  (el-get-bundle conao/other-window-or-split)
+  (bind-keys* :package other-window-or-split
+              ("C-t" . ws-other-window-or-split)
+              ("C-c j" . ws-adjust-windows-size)))
+#+END_SRC
+#+END_QUOTE
+** =bind-keymap=, =bind-keymap*= キーワード
+=bind-keymap= はキーマップをキーストロークにバインドします。
+つまり、バインドされたキーストロークはprefixキーとして動作するようになります。
+
+=bind= キーワードではキーバインドと同時に =autoload= により遅延ロードを設定しますが、
+キーマップの場合、キーマップ自身を実行することはありません。
+
+そのため、 =autoload= を行わない =bind= キーワードとして =bind-keymap= が用意されています。
+=bind-keymap= と =bind-keymap*= の関係性および、設定方法は =bind= と変わりません。
+
+#+BEGIN_QUOTE
+#+BEGIN_SRC emacs-lisp :results code :exports both
+  (macroexpand '(use-package org2blog
+                  :init
+                  (defvar org2blog-map nil "org2blog-prefix-map")
+                  (define-prefix-command 'org2blog-map)
+
+                  :bind-keymap (("C-c n" . org2blog-map))
+                  :bind (:map org2blog-map
+                              ("n" . org2blog/wp-new-entry)
+                              ("i" . org2blog/wp-login)
+                              ("o" . org2blog/wp-logout)
+                              ("p" . org2blog/wp-post-buffer-and-publish)
+                              ("l" . org2blog/wp-insert-post-or-page-link))))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (unless
+      (fboundp 'org2blog/wp-new-entry)
+    (autoload #'org2blog/wp-new-entry "org2blog" nil t))
+  (unless
+      (fboundp 'org2blog/wp-login)
+    (autoload #'org2blog/wp-login "org2blog" nil t))
+  (unless
+      (fboundp 'org2blog/wp-logout)
+    (autoload #'org2blog/wp-logout "org2blog" nil t))
+  (unless
+      (fboundp 'org2blog/wp-post-buffer-and-publish)
+    (autoload #'org2blog/wp-post-buffer-and-publish "org2blog" nil t))
+  (unless
+      (fboundp 'org2blog/wp-insert-post-or-page-link)
+    (autoload #'org2blog/wp-insert-post-or-page-link "org2blog" nil t))
+  (defvar org2blog-map nil "org2blog-prefix-map")
+  (define-prefix-command 'org2blog-map)
+  (bind-key "C-c n"
+            #'(lambda nil
+                (interactive)
+                (use-package-autoload-keymap 'org2blog-map 'org2blog nil)))
+  (bind-keys :package org2blog
+             ("n" . org2blog/wp-new-entry)
+             :map org2blog-map
+             ("i" . org2blog/wp-login)
+             ("o" . org2blog/wp-logout)
+             ("p" . org2blog/wp-post-buffer-and-publish)
+             ("l" . org2blog/wp-insert-post-or-page-link)))
+#+END_SRC
+#+END_QUOTE
+** =commands= キーワード
+=autoload= 設定されていないコマンドに対して =autoload= を設定します。
+
+melpaで配布されているパッケージ等は =@autoload= というマジックキーワードをlispパッケージ内に入れることで
+=package.el= がインストールする際に =autoload= 用のファイルを自動生成しています。
+そのためほとんどのパッケージでは使うことはないのですが、作成者が =autoload= の設定をし忘れていたり、
+そもそもそんな風潮のなかった頃の古いパッケージを使用する場合などに使用できます。
+
+=commands= キーワードが設定されると、 =use-package= は =autoload= 設定を展開し、
+=commands= キーワードで設定されたコマンドを実行するときにパッケージ全体を読み込みます。
+
+#+BEGIN_QUOTE
+#+BEGIN_SRC emacs-lisp :results code :exports both
+  (macroexpand '(use-package auto-install
+    :commands (auto-install-from-buffer
+               auto-install-from-url
+               auto-install-from-emacswiki)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (unless
+      (fboundp 'auto-install-from-buffer)
+    (autoload #'auto-install-from-buffer "auto-install" nil t))
+  (unless
+      (fboundp 'auto-install-from-url)
+    (autoload #'auto-install-from-url "auto-install" nil t))
+  (unless
+      (fboundp 'auto-install-from-emacswiki)
+    (autoload #'auto-install-from-emacswiki "auto-install" nil t)))
+#+END_SRC
+#+END_QUOTE
+** =:preface=, =:init=, =:config= キーワード
+#+BEGIN_SRC emacs-lisp :results code :exports both
+(macroexpand '(use-package example
+  ;; Note that errors are never trapped in the preface, since doing so would
+  ;; hide definitions from the byte-compiler.
+  :preface (message "I'm here at byte-compile and load time.")
+  :init (message "I'm always here at startup")
+  :config
+  (message "I'm always here after the package is loaded")
+  (error "oops")
+  ;; Don't try to (require 'example), this is just an example!
+  :no-require t
+  :catch (lambda (keyword err)
+           (message (error-message-string err)))))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (eval-and-compile
+    (message "I'm here at byte-compile and load time."))
+  (defvar use-package--warning316
+    (lambda
+      (keyword err)
+      (message
+       (error-message-string err))))
+  (condition-case-unless-debug err
+      (progn
+        (condition-case-unless-debug err
+            (message "I'm always here at startup")
+          (error
+           (funcall use-package--warning316 :init err)))
+        (condition-case-unless-debug err
+            (progn
+              (message "I'm always here after the package is loaded")
+              (error "oops")
+              t)
+          (error
+           (funcall use-package--warning316 :config err))))
+    (error
+     (funcall use-package--warning316 :catch err))))
+#+END_SRC
