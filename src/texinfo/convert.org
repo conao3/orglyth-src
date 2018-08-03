@@ -1,0 +1,13 @@
+#+title: 変換
+#+subtitle: texinfoからHTML, PDFなどに変換する
+#+author: conao
+#+date: <2018-08-04 Sat 05:39>
+
+# history
+# <2018-08-04 Sat 05:39> first-draft
+
+texinfoは単一のドキュメントから多彩なフォーマットに変換できる。
+* texi2html
+#+BEGIN_SRC shell
+  exi2html use-package.texi
+#+END_SRC
