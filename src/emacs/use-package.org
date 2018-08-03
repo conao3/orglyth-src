@@ -1,0 +1,12 @@
+#+title: use-package
+#+subtitle: use-packageでモダンな.emacs設定を行う！
+#+author: conao
+#+date: <2018-08-04 Sat 04:45>
+
+# history
+#
+# <2018-08-04 Sat 04:45> first-draft
+
+* use-packageとは
+* keyword
+
