@@ -1,0 +1,138 @@
+#+title: flycheck
+#+subtitle: flycheckでEmacsにリアルタイムチェッカーを！
+#+author: conao
+#+date: <2018-08-04 Sat 04:36>
+
+# history
+#
+# <2018-08-04 Sat 04:36> first draft
+
+* flycheckとは
+* flycheckの対応言語
+#+BEGIN_SRC elisp -n
+  (defcustom flycheck-checkers
+    '(ada-gnat
+      asciidoctor
+      asciidoc
+      c/c++-clang
+      c/c++-gcc
+      c/c++-cppcheck
+      cfengine
+      chef-foodcritic
+      coffee
+      coffee-coffeelint
+      coq
+      css-csslint
+      css-stylelint
+      cwl
+      d-dmd
+      dockerfile-hadolint
+      emacs-lisp
+      emacs-lisp-checkdoc
+      erlang-rebar3
+      erlang
+      eruby-erubis
+      fortran-gfortran
+      go-gofmt
+      go-golint
+      go-vet
+      go-build
+      go-test
+      go-errcheck
+      go-unconvert
+      go-megacheck
+      groovy
+      haml
+      handlebars
+      haskell-stack-ghc
+      haskell-ghc
+      haskell-hlint
+      html-tidy
+      javascript-eslint
+      javascript-jshint
+      javascript-standard
+      json-jsonlint
+      json-python-json
+      jsonnet
+      less
+      less-stylelint
+      llvm-llc
+      lua-luacheck
+      lua
+      markdown-markdownlint-cli
+      markdown-mdl
+      nix
+      perl
+      perl-perlcritic
+      php
+      php-phpmd
+      php-phpcs
+      processing
+      proselint
+      protobuf-protoc
+      pug
+      puppet-parser
+      puppet-lint
+      python-flake8
+      python-pylint
+      python-pycompile
+      python-mypy
+      r-lintr
+      racket
+      rpm-rpmlint
+      rst-sphinx
+      rst
+      ruby-rubocop
+      ruby-reek
+      ruby-rubylint
+      ruby
+      ruby-jruby
+      rust-cargo
+      rust
+      rust-clippy
+      scala
+      scala-scalastyle
+      scheme-chicken
+      scss-lint
+      scss-stylelint
+      sass/scss-sass-lint
+      sass
+      scss
+      sh-bash
+      sh-posix-dash
+      sh-posix-bash
+      sh-zsh
+      sh-shellcheck
+      slim
+      slim-lint
+      sql-sqlint
+      systemd-analyze
+      tcl-nagelfar
+      tex-chktex
+      tex-lacheck
+      texinfo
+      typescript-tslint
+      verilog-verilator
+      vhdl-ghdl
+      xml-xmlstarlet
+      xml-xmllint
+      yaml-jsyaml
+      yaml-ruby)
+    "Syntax checkers available for automatic selection.
+
+  A list of Flycheck syntax checkers to choose from when syntax
+  checking a buffer.  Flycheck will automatically select a suitable
+  syntax checker from this list, unless `flycheck-checker' is set,
+  either directly or with `flycheck-select-checker'.
+
+  You should not need to change this variable normally.  In order
+  to disable syntax checkers, please use
+  `flycheck-disabled-checkers'.  This variable is intended for 3rd
+  party extensions to tell Flycheck about new syntax checkers.
+
+  Syntax checkers in this list must be defined with
+  `flycheck-define-checker'."
+    :group 'flycheck
+    :type '(repeat (symbol :tag "Checker"))
+    :risky t)
+#+END_SRC
