@@ -80,7 +80,7 @@ melpaからできます。
     '(eval-after-load 'c
        '(funcall use-package--next599))))
 #+END_SRC
-** =bind=, =bind*= キーワード
+** =:bind=, =:bind*= キーワード
 キーバインドの設定を行います。
 
 伝統的には =define-key= や =global-set-key= などが使われており、 =kbd= と組み合わせたり
@@ -191,7 +191,7 @@ melpaからできます。
               ("C-t" . ws-other-window-or-split)
               ("C-c j" . ws-adjust-windows-size)))
 #+END_SRC
-** =bind-keymap=, =bind-keymap*= キーワード
+** =:bind-keymap=, =:bind-keymap*= キーワード
 =bind-keymap= はキーマップをキーストロークにバインドします。
 つまり、バインドされたキーストロークはprefixキーとして動作するようになります。
 
@@ -248,7 +248,7 @@ melpaからできます。
              ("p" . org2blog/wp-post-buffer-and-publish)
              ("l" . org2blog/wp-insert-post-or-page-link)))
 #+END_SRC
-** =commands= キーワード
+** =:commands= キーワード
 =autoload= 設定されていないコマンドに対して =autoload= を設定します。
 
 melpaで配布されているパッケージ等は =@autoload= というマジックキーワードをlispパッケージ内に入れることで
