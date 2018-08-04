@@ -3,6 +3,8 @@
 #+author: conao
 #+date: <2018-08-04 Sat 04:45>
 
+#+macro: export :results code :exports both
+
 # history
 #
 # <2018-08-04 Sat 04:45> first-draft
@@ -22,25 +24,24 @@ melpaからできます。
 ** キーワードなし
 キーワードなしでuse-packageを呼んだ場合、require文のみが展開されます。
 
-#+BEGIN_QUOTE
-#+BEGIN_SRC emacs-lisp :results code :exports both
-  (macroexpand '(use-package a))
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package a))
 #+END_SRC
 
 #+RESULTS:
 #+BEGIN_SRC emacs-lisp
 (require 'a nil nil)
 #+END_SRC
-#+END_QUOTE
 ** =:after= キーワード
 パッケージ =b= に依存しているパッケージ =a= はパッケージ =b= が読み込まれた後に読み込みたいです。
 
 伝統的には =eval-ater-load= を利用して設定しますが、 =after= キーワードにより設定できます。
  
-#+BEGIN_QUOTE
-#+BEGIN_SRC emacs-lisp :results code :exports both
-    (macroexpand '(use-package a
-                    :after b))
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package a
+                :after b))
 #+END_SRC
 
 #+RESULTS:
@@ -48,10 +49,6 @@ melpaからできます。
 (eval-after-load 'b
   '(require 'a nil nil))
 #+END_SRC
-#+END_QUOTE
-
-=after= キーワードはさらに =:all=, =:any= キーワードを含んだリストを受け取ることができ、
-より複雑な遅延読み込みの設定を行うことができます。
 
 次の例は =:after (:any (:all a b) (:all c d))= を与えており、 =foo= パッケージは
 =a= と =b= が2つとも読み込まれる、または =c= と =d= が2つとも読み込まれた後に読み込まれます。
@@ -59,30 +56,30 @@ melpaからできます。
 展開例を見ると分かる通り、 =use-package= により一時変数が展開されます。
 
 なお、 =:after (foo bar)= は =:after (:all foo bar)= と指定した結果と同等になります。
-#+BEGIN_QUOTE
-#+BEGIN_SRC emacs-lisp :results code :exports both
-  (macroexpand '(use-package foo
-                  :after (:any (:all a b) (:all c d))))
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package foo
+                :after (:any (:all a b) (:all c d))))
 #+END_SRC
 
 #+RESULTS:
 #+BEGIN_SRC emacs-lisp
 (progn
-  (defvar use-package--loaded238 nil)
-  (defvar use-package--result238 nil)
-  (defvar use-package--next238
+  (defvar use-package--loaded599 nil)
+  (defvar use-package--result599 nil)
+  (defvar use-package--next599
     #'(lambda nil
-        (if use-package--loaded238 use-package--result238
-          (setq use-package--loaded238 t use-package--result238
+        (if use-package--loaded599 use-package--result599
+          (setq use-package--loaded599 t use-package--result599
                 (require 'foo nil nil)))))
   (eval-after-load 'b
     '(eval-after-load 'a
-       '(funcall use-package--next238)))
+       '(funcall use-package--next599)))
   (eval-after-load 'd
     '(eval-after-load 'c
-       '(funcall use-package--next238))))
+       '(funcall use-package--next599))))
 #+END_SRC
-#+END_QUOTE
 ** =bind=, =bind*= キーワード
 キーバインドの設定を行います。
 
@@ -93,10 +90,11 @@ melpaからできます。
 
 なお、 =autoload= で展開されるので、起動時にはキーバインドの設定のみ行われ、
 実際にパッケージが読み込まれるのはキーバインドが実行されたときです。
-#+BEGIN_QUOTE
-#+BEGIN_SRC emacs-lisp :results code :exports both
-  (macroexpand '(use-package helm
-                  :bind (("M-x" . helm-M-x))))
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package helm
+                :bind (("M-x" . helm-M-x))))
 #+END_SRC
 
 #+RESULTS:
@@ -108,7 +106,6 @@ melpaからできます。
   (bind-keys :package helm
              ("M-x" . helm-M-x)))
 #+END_SRC
-#+END_QUOTE
 
 以前はグローバルキーマップのみサポートされていましたが、
 マイナーモードのキーマップ割り当ても =bind= キーワードで出来るようになりました。
@@ -118,16 +115,17 @@ melpaからできます。
 =helm-execute-persistent-action= と =helm-select-action= は =helm-map= に割り当てられます。
 
 マップの指定は次のマップ指定が現れるまで有効です。
-#+BEGIN_QUOTE
-#+BEGIN_SRC emacs-lisp :results code :exports both
-  (macroexpand '(use-package helm
-                  :bind (("M-x"     . helm-M-x)
-                         ("C-x C-f" . helm-find-files)
-                         :map helm-command-map
-                         ("o"       . helm-occur)
-                         :map helm-map
-                         ("<tab>"   . helm-execute-persistent-action)
-                         ("C-z"     . helm-select-action))))
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package helm
+                :bind (("M-x"     . helm-M-x)
+                       ("C-x C-f" . helm-find-files)
+                       :map helm-command-map
+                       ("o"       . helm-occur)
+                       :map helm-map
+                       ("<tab>"   . helm-execute-persistent-action)
+                       ("C-z"     . helm-select-action))))
 #+END_SRC
 
 #+RESULTS:
@@ -157,7 +155,6 @@ melpaからできます。
              ("<tab>" . helm-execute-persistent-action)
              ("C-z" . helm-select-action)))
 #+END_SRC
-#+END_QUOTE
 
 メジャーモードのキーマップの方が、グローバルキーマップより優先されるため、
 モードによっては =bind= で指定したキーバインドが動かない場合があります。
@@ -168,14 +165,16 @@ melpaからできます。
 しかし =use-package= はその記法をうまくラップし、 =bind= キーワードを =bind*= キーワードに変更するだけで、
 上記の作業を行ってくれます。
 つまり、すべてのキーマップより優先されるマイナーモードを作り、そのマイナーモードにキーバインドを定義します。
+( =use-package= がというより、 =bind-keys= にぶん投げてますが。。)
 
 =bind*= においても =bind= と同じように =:map= キーワードを使用できます。
-#+BEGIN_QUOTE
-#+BEGIN_SRC emacs-lisp :results code :exports both
-  (macroexpand '(use-package other-window-or-split
-                  :init (el-get-bundle conao/other-window-or-split)
-                  :bind* (("C-t"   . ws-other-window-or-split)
-                          ("C-c j" . ws-adjust-windows-size))))
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package other-window-or-split
+                :init (el-get-bundle conao/other-window-or-split)
+                :bind* (("C-t"   . ws-other-window-or-split)
+                        ("C-c j" . ws-adjust-windows-size))))
 #+END_SRC
 
 #+RESULTS:
@@ -192,7 +191,6 @@ melpaからできます。
               ("C-t" . ws-other-window-or-split)
               ("C-c j" . ws-adjust-windows-size)))
 #+END_SRC
-#+END_QUOTE
 ** =bind-keymap=, =bind-keymap*= キーワード
 =bind-keymap= はキーマップをキーストロークにバインドします。
 つまり、バインドされたキーストロークはprefixキーとして動作するようになります。
@@ -203,20 +201,20 @@ melpaからできます。
 そのため、 =autoload= を行わない =bind= キーワードとして =bind-keymap= が用意されています。
 =bind-keymap= と =bind-keymap*= の関係性および、設定方法は =bind= と変わりません。
 
-#+BEGIN_QUOTE
-#+BEGIN_SRC emacs-lisp :results code :exports both
-  (macroexpand '(use-package org2blog
-                  :init
-                  (defvar org2blog-map nil "org2blog-prefix-map")
-                  (define-prefix-command 'org2blog-map)
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package org2blog
+                :init
+                (defvar org2blog-map nil "org2blog-prefix-map")
+                (define-prefix-command 'org2blog-map)
 
-                  :bind-keymap (("C-c n" . org2blog-map))
-                  :bind (:map org2blog-map
-                              ("n" . org2blog/wp-new-entry)
-                              ("i" . org2blog/wp-login)
-                              ("o" . org2blog/wp-logout)
-                              ("p" . org2blog/wp-post-buffer-and-publish)
-                              ("l" . org2blog/wp-insert-post-or-page-link))))
+                :bind-keymap (("C-c n" . org2blog-map))
+                :bind (:map org2blog-map
+                            ("n" . org2blog/wp-new-entry)
+                            ("i" . org2blog/wp-login)
+                            ("o" . org2blog/wp-logout)
+                            ("p" . org2blog/wp-post-buffer-and-publish)
+                            ("l" . org2blog/wp-insert-post-or-page-link))))
 #+END_SRC
 
 #+RESULTS:
@@ -243,15 +241,13 @@ melpaからできます。
             #'(lambda nil
                 (interactive)
                 (use-package-autoload-keymap 'org2blog-map 'org2blog nil)))
-  (bind-keys :package org2blog
+  (bind-keys :package org2blog :map org2blog-map
              ("n" . org2blog/wp-new-entry)
-             :map org2blog-map
              ("i" . org2blog/wp-login)
              ("o" . org2blog/wp-logout)
              ("p" . org2blog/wp-post-buffer-and-publish)
              ("l" . org2blog/wp-insert-post-or-page-link)))
 #+END_SRC
-#+END_QUOTE
 ** =commands= キーワード
 =autoload= 設定されていないコマンドに対して =autoload= を設定します。
 
@@ -263,12 +259,12 @@ melpaで配布されているパッケージ等は =@autoload= というマジ�
 =commands= キーワードが設定されると、 =use-package= は =autoload= 設定を展開し、
 =commands= キーワードで設定されたコマンドを実行するときにパッケージ全体を読み込みます。
 
-#+BEGIN_QUOTE
-#+BEGIN_SRC emacs-lisp :results code :exports both
-  (macroexpand '(use-package auto-install
-    :commands (auto-install-from-buffer
-               auto-install-from-url
-               auto-install-from-emacswiki)))
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package auto-install
+                :commands (auto-install-from-buffer
+                           auto-install-from-url
+                           auto-install-from-emacswiki)))
 #+END_SRC
 
 #+RESULTS:
@@ -284,21 +280,34 @@ melpaで配布されているパッケージ等は =@autoload= というマジ�
       (fboundp 'auto-install-from-emacswiki)
     (autoload #'auto-install-from-emacswiki "auto-install" nil t)))
 #+END_SRC
-#+END_QUOTE
 ** =:preface=, =:init=, =:config= キーワード
-#+BEGIN_SRC emacs-lisp :results code :exports both
+これらのキーワードは配下のS式を実行する順番を定義します。
+=:preface= -> =:init= -> =(require 'foo)= -> =:config= の順番です。
+
+これらのキーワードは展開時に暗黙のprognによって囲まれます。
+そのため、いちいち(progn ...)で囲って一文のようにしなくても、大丈夫です。
+
+暗黙のprognの範囲は他のキーワードが出現するまでです。
+
+基本的には =require= 後の処理を行う =:config= のみで大丈夫ですが、パッケージの設計により、
+=require= 前に =setq= しないといけない場面があります。
+そういう場合に =:init= を使用しますし、別のパッケージ管理ソフト =el-get= などのインストール
+作業を記述する場合もあります。(=package= を使用する場合は =:ensure t= でインストールできます)
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
 (macroexpand '(use-package example
-  ;; Note that errors are never trapped in the preface, since doing so would
-  ;; hide definitions from the byte-compiler.
-  :preface (message "I'm here at byte-compile and load time.")
-  :init (message "I'm always here at startup")
-  :config
-  (message "I'm always here after the package is loaded")
-  (error "oops")
-  ;; Don't try to (require 'example), this is just an example!
-  :no-require t
-  :catch (lambda (keyword err)
-           (message (error-message-string err)))))
+                ;; Note that errors are never trapped in the preface, since doing so would
+                ;; hide definitions from the byte-compiler.
+                :preface (message "I'm here at byte-compile and load time.")
+                :init (message "I'm always here at startup")
+                :config
+                (message "I'm always here after the package is loaded")
+                (error "oops")
+                ;; Don't try to (require 'example), this is just an example!
+                :no-require t
+                :catch (lambda (keyword err)
+                         (message (error-message-string err)))))
 #+END_SRC
 
 #+RESULTS:
@@ -306,7 +315,7 @@ melpaで配布されているパッケージ等は =@autoload= というマジ�
 (progn
   (eval-and-compile
     (message "I'm here at byte-compile and load time."))
-  (defvar use-package--warning316
+  (defvar use-package--warning599
     (lambda
       (keyword err)
       (message
@@ -316,14 +325,505 @@ melpaで配布されているパッケージ等は =@autoload= というマジ�
         (condition-case-unless-debug err
             (message "I'm always here at startup")
           (error
-           (funcall use-package--warning316 :init err)))
+           (funcall use-package--warning599 :init err)))
         (condition-case-unless-debug err
             (progn
               (message "I'm always here after the package is loaded")
               (error "oops")
               t)
           (error
-           (funcall use-package--warning316 :config err))))
+           (funcall use-package--warning599 :config err))))
     (error
-     (funcall use-package--warning316 :catch err))))
+     (funcall use-package--warning599 :catch err))))
 #+END_SRC
+** =:custom= キーワード
+=defcustom= で宣言された変数に関しては =custom-set-variables= で設定したほうが良い
+という議論があったり、なかったりします。
+
+- [[https://memo.sugyan.com/entry/20120104/1325604433][defcustomで定義された変数はcustom-set-variablesで変更すべき？ - すぎゃーんメモ]]
+- [[http://kawamuray.hatenablog.com/entry/2013/11/03/180543][defcustomで定義された変数はsetqではなくcustom-set-variablesで設定すべき理由 - kawamuray's blog]]
+- [[https://abicky.net/2013/12/30/184239/][custom-set-variables は使わない方が良いかもしれない - あらびき日記]]
+
+この議論は画一的に結論を決めようとしているので、混乱しているのであり、実際のところ、
+どちらを使うべきかはパッケージ毎に異なると思っています。
+
+defcustom変数定義を参照し、 =:set= が定義されている場合、 =custom-set-variables= が良いでしょうし、
+定義されていなかった場合、 =setq= で代入してしまいます。
+
+とりあえず =use-package= は =:custom= キーワードのみ定義されており、 =setq= キーワードがないとこを見ると、
+=custom-set-variables= 派なのかもしれません。
+
+3番目の値はドキュメント文章が設定できますが、別になくても構いません。
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package elscreen
+                :custom ((elscreen-prefix-key (kbd "C-c e"))
+                         (elscreen-tab-display-kill-screen nil "hide [<->] mark"))
+                :config
+                (setq elscreen-display-screen-number nil)
+                (elscreen-start)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (customize-set-variable 'elscreen-prefix-key
+                          (kbd "C-c e")
+                          "Customized with use-package elscreen")
+  (customize-set-variable 'elscreen-tab-display-kill-screen nil "hide [<->] mark")
+  (require 'elscreen nil nil)
+  (setq elscreen-display-screen-number nil)
+  (elscreen-start)
+  t)
+#+END_SRC
+** =:custom-face= キーワード
+フェイスの設定を記述できます。
+ポイントの文字がどんなフェイスが設定されているかは、調べたい文字にポインタを持っていって、
+=M-x describe-char= を実行することで、faceを調べることができます。
+
+設定方法は =custom-set-faces= を調べていただければと思います。
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package eruby-mode
+                :custom-face
+                (eruby-standard-face ((t (:slant italic))))))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (custom-set-faces
+   '(eruby-standard-face
+     ((t
+       (:slant italic)))))
+  (require 'eruby-mode nil nil))
+#+END_SRC
+** =:defer=, =:demand= キーワード
+遅延ロードの設定を行います。 =:defer= は =autoload= による遅延ロードを実行し、
+=:demand= は即時ロード(デフォルトの動作)します。
+
+これらのキーワードはキーワードを置くだけで効力を発揮しますが、引数を一つとってもいいことになっています。
+そのため、筆者はみやすさの観点から =t= を与えています。
+(と思ったら、 =:defer nil= とすると、 =:demand t= の展開がされました。
+逆に =:demand nil= は =:defer t= と同じ展開結果になりませんでした。
+真偽値を与えられることはドキュメントで言及されてないので、
+統一性を考えて与えるときは =t= のみにしたほうが良いと思います。)
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package helm :defer :config (setq a b)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(eval-after-load 'helm
+  '(progn
+     (setq a b)
+     t))
+#+END_SRC
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package helm :defer t :config (setq foo 'a)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(eval-after-load 'helm
+  '(progn
+     (setq foo 'a)
+     t))
+#+END_SRC
+=autoload= による遅延ロード関数の設定は =package.el= などが自動で生成しています。
+特に指定する必要がある場合は、 =:commands= キーワードなどで自分で指定します。
+
+しかし、 =:commands= で遅延ロードを設定するということは、もちろん遅延ロードするということなので、
+=:defer= キーワードを指定しなくても遅延ロード用の式が展開されます。
+=:bind= キーワードを指定したときも暗黙的に =defer= を指定したとして、遅延ロード用の式が展開されます。
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package auto-install
+                :commands (auto-install-from-buffer)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(if
+    (fboundp 'auto-install-from-buffer)
+    nil
+  (autoload #'auto-install-from-buffer "auto-install" nil t))
+#+END_SRC
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package auto-install :defer t
+                :commands (auto-install-from-buffer)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(if
+    (fboundp 'auto-install-from-buffer)
+    nil
+  (autoload #'auto-install-from-buffer "auto-install" nil t))
+#+END_SRC
+** =:defines=, =:functions= キーワード
+バイトコンパイル時にunknown~系のwarningが出ることを抑制します。
+
+.emacsをバイトコンパイルしている方は便利だと思います。
+バイトコンパイル時に展開されるので、 =macroexpand= では変化がわかりません。
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package texinfo
+                :defines texinfo-section-list
+                :commands texinfo-mode
+                :init
+                (add-to-list 'auto-mode-alist '("\\.texi$" . texinfo-mode))))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (unless
+      (fboundp 'texinfo-mode)
+    (autoload #'texinfo-mode "texinfo" nil t))
+  (add-to-list 'auto-mode-alist
+               '("\\.texi$" . texinfo-mode)))
+#+END_SRC
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package ruby-mode
+                :mode "\\.rb\\'"
+                :interpreter "ruby"
+                :functions inf-ruby-keys
+                :config
+                (defun my-ruby-mode-hook ()
+                  (require 'inf-ruby)
+                  (inf-ruby-keys))
+
+                (add-hook 'ruby-mode-hook 'my-ruby-mode-hook)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (unless
+      (fboundp 'ruby-mode)
+    (autoload #'ruby-mode "ruby-mode" nil t))
+  (eval-after-load 'ruby-mode
+    '(progn
+       (defun my-ruby-mode-hook nil
+         (require 'inf-ruby)
+         (inf-ruby-keys))
+       (add-hook 'ruby-mode-hook 'my-ruby-mode-hook)
+       t))
+  (add-to-list 'auto-mode-alist
+               '("\\.rb\\'" . ruby-mode))
+  (add-to-list 'interpreter-mode-alist
+               '("ruby" . ruby-mode)))
+#+END_SRC
+** =:diminish=, =:delight= キーワード
+マイナーモードの表示を隠したり、変更したりする、[[https://github.com/myrjola/diminish.el][diminish.el]]と[[https://www.emacswiki.org/emacs/DelightedModes][delight.el]]の糖衣構文を提供します。
+使用するにはこのキーワードを使用する前に、対応するelを =require= しておく必要があります。
+
+=diminish.el= と =delight.el= の違いがわからなかったので、例では =diminish.el= のみ使用します。
+
+=:diminish= キーワードは引数がなかった場合、 =use-package= の引数からマイナーモードの名前を予想します。
+たいていのパッケージの場合、 =パッケージ名-mode= のマイナーモードが提供されますが、
+明示的に与えることもできます。
+
+コンスセルのcdr部を与えなかった場合、完全に消去します。
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package hideshow :diminish hs-minor-mode))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (require 'hideshow nil nil)
+  (if
+      (fboundp 'diminish)
+      (diminish 'hs-minor-mode)))
+#+END_SRC
+
+cdr部を与えた場合、その文字列が表示されるようにします。
+リストを与えることもでき、次の場合、 =abbrev-mode= は" Abb"で表示され、
+=a-mode= は(有効になっても)表示されません。
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand '(use-package abbrev :diminish ((abbrev-mode . " Abb") a-mode)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (require 'abbrev nil nil)
+  (if
+      (fboundp 'diminish)
+      (diminish 'abbrev-mode " Abb"))
+  (if
+      (fboundp 'diminish)
+      (diminish 'a-mode)))
+#+END_SRC
+
+readmeにはdelightの例として =:eval= キーワードを使った例がありました。
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+;; Remove the mode name for projectile-mode, but show the project name.
+(macroexpand '(use-package projectile
+  :delight '(:eval (concat " " (projectile-project-name)))))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (require 'projectile nil nil)
+  (if
+      (fboundp 'delight)
+      (delight
+       '((projectile-mode
+          (:eval
+           (concat " "
+                   (projectile-project-name)))
+          projectile)))))
+#+END_SRC
+** =:disabled= キーワード
+指定された =use-package= 式全体を無効化します。
+仕様は難しそうですが、結局、何を与えても単に =nil= になるだけです。
+
+=:defer= キーワードと同じように =:disabled= キーワードも指定しただけで効力があります。
+しかし、筆者はわかりやすさを重視して =t= を与えています。
+
+真偽値はハンドルされていないので、 =:disabled nil= としても有効化されるわけではありません。
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+(macroexpand (use-package flycheck :ensure t :disabled t
+               :config
+               (use-package flycheck-pos-tip :ensure t)
+               (setq flycheck-disabled-checkers '(emacs-lisp emacs-lisp-checkdoc))
+               (global-flycheck-mode)
+               (custom-set-variables
+                '(flycheck-keymap-prefix (kbd "C-c f"))
+                '(flycheck-display-errors-function #'flycheck-pos-tip-error-messages))
+               (smartrep-define-key
+                   global-map "M-g" '(("M-n" . 'flymake-goto-next-error)
+                                      ("M-p" . 'flymake-goto-prev-error)))))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+nil
+#+END_SRC
+** =:ensure=, =:pin= キーワード
+パッケージの =require= をする前にダウンロードする処理を記述できます。
+
+引数を何も与えない場合や、 =t= を与えた場合、 =use-package= に指定したパッケージと同じ名前のパッケージをダウンロードしようとします。
+明示的に与えた場合、その名前のパッケージをダウンロードします。
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+  (macroexpand '(use-package magit :ensure t))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (use-package-ensure-elpa 'magit
+                           '(t)
+                           'nil)
+  (require 'magit nil nil))
+#+END_SRC
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+  (macroexpand '(use-package tex :ensure auctex))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (use-package-ensure-elpa 'tex
+                           '(auctex)
+                           'nil)
+  (require 'tex nil nil))
+#+END_SRC
+
+=:pin= キーワードを指定しない場合、 =package.el= はmelpaからダウンロードしようとします。
+=:pin= キーワードの引数には =malpa=, =malpa-stable=, =gnu=, =manual= の値が指定できます。
+
+=:pin= にデフォルト値を設定したい場合、 =use-package-always-pin= を利用することができます。
+
+=:pin= キーワードはEmacs 24.4以前のバージョンで無視されます。
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+  ;; ignore org-mode from upstream and use a manually installed version
+  (macroexpand '(use-package org
+    :ensure t  
+    :pin manual))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (use-package-pin-package 'org "manual")
+  (use-package-ensure-elpa 'org
+                           '(t)
+                           'nil)
+  (require 'org nil nil))
+#+END_SRC
+** =:hook= キーワード
+hookを設定するための糖衣構文を提供します。
+
+伝統的には =add-hook= による設定が利用されていました。
+
+=:hook= には =-mode= というsuffixを消したシンボル名を指定します。
+リストを指定でき、コンスセルのcdr部を省略した場合、 =use-package= に指定されたパッケージ名を設定します。
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+  (macroexpand '(use-package ace-jump-mode :hook prog-mode))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (unless
+      (fboundp 'ace-jump-mode)
+    (autoload #'ace-jump-mode "ace-jump-mode" nil t))
+  (add-hook 'prog-mode-hook #'ace-jump-mode))
+#+END_SRC
+
+リストを与えた場合、与えたリスト全てに対してhookを指定します。
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+  (macroexpand '(use-package ace-jump-mode :hook (prog-mode text-mode)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (unless
+      (fboundp 'ace-jump-mode)
+    (autoload #'ace-jump-mode "ace-jump-mode" nil t))
+  (add-hook 'prog-mode-hook #'ace-jump-mode)
+  (add-hook 'text-mode-hook #'ace-jump-mode))
+#+END_SRC
+
+cdrを明示的に指定することで、設定されるモードを指定することができます。
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+  (macroexpand '(use-package ace-jump-mode
+                  :hook ((prog-mode text-mode) . ace-jump-mode)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (unless
+      (fboundp 'ace-jump-mode)
+    (autoload #'ace-jump-mode "ace-jump-mode" nil t))
+  (add-hook 'prog-mode-hook #'ace-jump-mode)
+  (add-hook 'text-mode-hook #'ace-jump-mode))
+#+END_SRC
+
+複数のモードを登録するときは、コンスセルをリストにして渡します。
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+  (macroexpand '(use-package ace-jump-mode
+                  :hook (((prog-mode text-mode) . ace-jump-mode)
+                         ((prog-mode text-mode) . ace-mode))))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (unless
+      (fboundp 'ace-jump-mode)
+    (autoload #'ace-jump-mode "ace-jump-mode" nil t))
+  (unless
+      (fboundp 'ace-mode)
+    (autoload #'ace-mode "ace-jump-mode" nil t))
+  (add-hook 'prog-mode-hook #'ace-jump-mode)
+  (add-hook 'text-mode-hook #'ace-jump-mode)
+  (add-hook 'prog-mode-hook #'ace-mode)
+  (add-hook 'text-mode-hook #'ace-mode))
+#+END_SRC
+** =:if=, =:when=, =:unless= キーワード
+=use-package= 設定を有効にする条件を設定できます。
+
+しかし、単に展開結果が指定したキーワードの条件分で囲まれるだけです。
+
+=else= 文を取れないので、 =:if= は =:when= と変わりません。
+=:unless foo= は =:if (not foo)= と同等です。
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+  (macroexpand '(use-package migemo
+                   :if (executable-find "cmigemo")
+                   :config (migemo-init)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(if
+    (executable-find "cmigemo")
+    (progn
+      (require 'migemo nil nil)
+      (migemo-init)
+      t))
+#+END_SRC
+
+複数の条件を取りたい場合は、 =:if= キーワードなどがリストを受け取れないので、キーワードを複数設定します。
+
+指定したキーワードはすべて =and= で結合されて =if= に渡されます。
+=:if=, =:when=, =:unless= キーワードが混在していても構いません。
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+  (macroexpand '(use-package migemo
+                  :if (executable-find "cmigemo")
+                  :if (executable-find "cccccmigemo")                
+                  :config (migemo-init)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(if
+    (and
+     (executable-find "cmigemo")
+     (executable-find "cccccmigemo"))
+    (progn
+      (require 'migemo nil nil)
+      (migemo-init)
+      t))
+#+END_SRC
+** =:load-path= キーワード
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+  (macroexpand '(use-package ess-site
+                  ;:load-path "site-lisp/ess/lisp/"
+                  :commands R
+                  :config (setq as as)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (unless
+      (fboundp 'R)
+    (autoload #'R "ess-site" nil t))
+  (eval-after-load 'ess-site
+    '(progn
+       (setq as as)
+       t)))
+#+END_SRC
+
