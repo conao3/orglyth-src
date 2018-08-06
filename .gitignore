@@ -33,4 +33,6 @@ sitemap.inc
 # export files
 index.html
 /src/**/*.html
+/src/**/*.tex
+/src/**/*.pdf
 /archives/
