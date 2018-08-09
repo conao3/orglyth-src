@@ -807,10 +807,38 @@ cdrを明示的に指定することで、設定されるモードを指定す�
       t))
 #+END_SRC
 ** =:load-path= キーワード
+パッケージの =require= 前に =load-path= の設定を行います。
+
+スラッシュから指定すると、絶対パスとして、
+ディレクトリ名から指定すると、 =user-emacs-direcroty= からの相対パスが指定されます。
+
 #+header: :exports both :results code
 #+BEGIN_SRC emacs-lisp
   (macroexpand '(use-package ess-site
-                  ;:load-path "site-lisp/ess/lisp/"
+                  :load-path "site-lisp/ess/lisp/"
+                  :commands R
+                  :config (setq as as)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+  (progn
+    (eval-and-compile
+      (add-to-list 'load-path "/Users/conao/.emacs.d/v25/site-lisp/ess/lisp/"))
+    (unless
+        (fboundp 'R)
+      (autoload #'R "ess-site" nil t))
+    (eval-after-load 'ess-site
+      '(progn
+         (setq as as)
+         t)))
+#+END_SRC
+
+リストを与えて、複数の =load-path= の設定を一括で行うこともできます。
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+  (macroexpand '(use-package ess-site
+                  :load-path ("site-lisp/ess/lisp/" "site-lisp/ess/llisp/" "/Users/shared/site-lisp")
                   :commands R
                   :config (setq as as)))
 #+END_SRC
@@ -818,6 +846,12 @@ cdrを明示的に指定することで、設定されるモードを指定す�
 #+RESULTS:
 #+BEGIN_SRC emacs-lisp
 (progn
+  (eval-and-compile
+    (add-to-list 'load-path "/Users/conao/.emacs.d/v25/site-lisp/ess/lisp/"))
+  (eval-and-compile
+    (add-to-list 'load-path "/Users/conao/.emacs.d/v25/site-lisp/ess/llisp/"))
+  (eval-and-compile
+    (add-to-list 'load-path "/Users/shared/site-lisp"))
   (unless
       (fboundp 'R)
     (autoload #'R "ess-site" nil t))
@@ -826,4 +860,85 @@ cdrを明示的に指定することで、設定されるモードを指定す�
        (setq as as)
        t)))
 #+END_SRC
+** =:mode=, =:interpreter= キーワード
+ファイル拡張子にフックされるメジャーモードの設定と、
+シバンにフックされるメジャーモードの設定を行います。
+
+コンスセルのcdr部が省略された場合は =use-package= に渡された =シンボル-mode= を
+=auto-mode-alist= や =interpreter-mode-alist= に設定します。
+
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+  (macroexpand '(use-package ruby-mode
+                  :mode "\\.rb\\'"
+                  :interpreter "ruby"))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (unless
+      (fboundp 'ruby-mode)
+    (autoload #'ruby-mode "ruby-mode" nil t))
+  (add-to-list 'auto-mode-alist
+               '("\\.rb\\'" . ruby-mode))
+  (add-to-list 'interpreter-mode-alist
+               '("ruby" . ruby-mode)))
+#+END_SRC
+
+リストを渡すことができます。cdr部で設定するモード名を指定できます。
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+  (macroexpand '(use-package ruby-mode
+                  :mode ("\\.rb\\" ("\\.ruby\\" . ruby-interaction-mode))
+                  :interpreter ("ruby" . my-ruby-mode)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (unless
+      (fboundp 'ruby-mode)
+    (autoload #'ruby-mode "ruby-mode" nil t))
+  (unless
+      (fboundp 'ruby-interaction-mode)
+    (autoload #'ruby-interaction-mode "ruby-mode" nil t))
+  (unless
+      (fboundp 'my-ruby-mode)
+    (autoload #'my-ruby-mode "ruby-mode" nil t))
+  (add-to-list 'auto-mode-alist
+               '("\\.rb\\" . ruby-mode))
+  (add-to-list 'auto-mode-alist
+               '("\\.ruby\\" . ruby-interaction-mode))
+  (add-to-list 'interpreter-mode-alist
+               '("ruby" . my-ruby-mode)))
+#+END_SRC
+** =:magic=, =:magic-fallback= キーワード
+#+header: :exports both :results code
+#+BEGIN_SRC emacs-lisp
+  (macroexpand '(use-package pdf-tools
+                  :load-path "site-lisp/pdf-tools/lisp"
+                  :magic ("%PDF" . pdf-view-mode)
+                  :magic-fallback ("#pdf" . pdf-view-mode)
+                  :config (pdf-tools-install)))
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC emacs-lisp
+(progn
+  (eval-and-compile
+    (add-to-list 'load-path "/Users/conao/.emacs.d/v25/site-lisp/pdf-tools/lisp"))
+  (unless
+      (fboundp 'pdf-view-mode)
+    (autoload #'pdf-view-mode "pdf-tools" nil t))
+  (eval-after-load 'pdf-tools
+    '(progn
+       (pdf-tools-install)
+       t))
+  (add-to-list 'magic-fallback-mode-alist
+               '("#pdf" . pdf-view-mode))
+  (add-to-list 'magic-mode-alist
+               '("%PDF" . pdf-view-mode)))
+#+END_SRC
+
 
