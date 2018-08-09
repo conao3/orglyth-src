@@ -1,0 +1,13 @@
+#+title: org-current-line-string
+#+subtitle: 現在行の文字列を取得する
+#+date: <2018-08-09 Thu 13:01>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 13:02> first draft
+
+#+begin_src emacs-lisp -n
+  (defsubst org-current-line-string (&optional to-here)
+    (buffer-substring (point-at-bol) (if to-here (point) (point-at-eol))))
+#+end_src

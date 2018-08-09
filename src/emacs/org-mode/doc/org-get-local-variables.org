@@ -1,0 +1,28 @@
+#+title: org-get-local-variables
+#+subtitle: バッファローカルの変数リストを取得する
+#+date: <2018-08-09 Thu 14:14>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 14:14> first draft
+
+#+begin_src emacs-lisp -n
+  (defun org-get-local-variables ()
+    "Return a list of all local variables in an Org mode buffer."
+    (delq nil
+          (mapcar
+           (lambda (x)
+             (let* ((binding (if (symbolp x) (list x) (list (car x) (cdr x))))
+                    (name (car binding)))
+               (and (not (get name 'org-state))
+                    (not (memq name org-unique-local-variables))
+                    (string-match-p
+                     "\\`\\(org-\\|orgtbl-\\|outline-\\|comment-\\|paragraph-\\|\
+  auto-fill\\|normal-auto-fill\\|fill-paragraph\\|indent-\\)"
+                     (symbol-name name))
+                    binding)))
+           (with-temp-buffer
+             (org-mode)
+             (buffer-local-variables)))))
+#+end_src

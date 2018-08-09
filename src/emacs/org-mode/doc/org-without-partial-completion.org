@@ -1,0 +1,22 @@
+#+title: org-without-partial-completion
+#+subtitle: partial-completion-modeを無効にした上でbodyを実行する
+#+date: <2018-08-09 Thu 11:03>
+#+author: conao
+#+orglyth-tags: org-mode org-macs
+
+# history
+# <2018-08-09 Thu 11:03> first draft
+
+#+begin_src emacs-lisp -n
+  (defmacro org-without-partial-completion (&rest body)
+    (declare (debug (body)))
+    `(if (and (boundp 'partial-completion-mode)
+              partial-completion-mode
+              (fboundp 'partial-completion-mode))
+         (unwind-protect
+             (progn
+               (partial-completion-mode -1)
+               ,@body)
+           (partial-completion-mode 1))
+       ,@body))
+#+end_src

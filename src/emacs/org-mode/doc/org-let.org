@@ -1,0 +1,14 @@
+#+title: org-let
+#+subtitle: org-modeにおけるlet
+#+date: <2018-08-09 Thu 11:29>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 11:29> first draft
+
+#+begin_src emacs-lisp -n
+  (defun org-let (list &rest body)
+    (eval (cons 'let (cons list body))))
+  (put 'org-let 'lisp-indent-function 1)
+#+end_src

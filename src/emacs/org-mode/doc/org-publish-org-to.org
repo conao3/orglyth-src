@@ -1,4 +1,5 @@
 #+title: org-publish-org-to
+#+subtitle: どんなファイルにエクスポートするか
 #+date: <2018-08-02 Thu 09:03>
 #+author: conao
 

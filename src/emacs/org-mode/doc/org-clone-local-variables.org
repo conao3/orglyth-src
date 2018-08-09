@@ -1,0 +1,20 @@
+#+title: org-clone-local-variables
+#+subtitle: バッファローカル変数をコピーする
+#+date: <2018-08-09 Thu 14:30>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 14:30> first draft
+
+#+begin_src emacs-lisp -n
+  (defun org-clone-local-variables (from-buffer &optional regexp)
+    "Clone local variables from FROM-BUFFER.
+  Optional argument REGEXP selects variables to clone."
+    (dolist (pair (buffer-local-variables from-buffer))
+      (pcase pair
+        (`(,name . ,value)		;ignore unbound variables
+         (when (and (not (memq name org-unique-local-variables))
+                    (or (null regexp) (string-match-p regexp (symbol-name name))))
+           (ignore-errors (set (make-local-variable name) value)))))))
+#+end_src

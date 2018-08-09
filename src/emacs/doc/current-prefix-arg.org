@@ -1,0 +1,18 @@
+#+title: current-prefix-arg
+#+subtitle: current-prefix-arg
+#+date: <2018-08-09 Thu 11:34>
+#+author: conao
+#+orglyth-tags: emacs elisp
+
+# history
+# <2018-08-09 Thu 11:34> first draft
+
+#+begin_src C -n
+  DEFVAR_LISP ("current-prefix-arg", Vcurrent_prefix_arg,
+               doc: /* The value of the prefix argument for this editing command.
+                       It may be a number, or the symbol `-' for just a minus sign as arg,
+                       or a list whose car is a number for just one or more C-u's
+                       or nil if no argument has been specified.
+                       This is what `(interactive \"P\")' returns.  */);
+  Vcurrent_prefix_arg = Qnil;
+#+end_src

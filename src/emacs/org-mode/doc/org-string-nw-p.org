@@ -1,0 +1,17 @@
+#+title: org-string-nw-p
+#+subtitle: 文字列に空白が含まれているかを検査する
+#+date: <2018-08-09 Thu 10:38>
+#+author: conao
+#+orglyth-tags: org-mode org-macs
+
+# history
+# <2018-08-09 Thu 10:38> first draft
+
+#+begin_src emacs-lisp -n
+  (defun org-string-nw-p (s)
+    "Return S if S is a string containing a non-blank character.
+  Otherwise, return nil."
+    (and (stringp s)
+         (string-match-p "[^ \r\t\n]" s)
+         s))
+#+end_src

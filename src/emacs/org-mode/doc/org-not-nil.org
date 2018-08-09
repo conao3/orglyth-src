@@ -1,0 +1,15 @@
+#+title: org-not-nil
+#+subtitle: 文字列の'nil'を含めた真偽値検査
+#+date: <2018-08-09 Thu 10:49>
+#+author: conao
+#+orglyth-tags: org-mode org-macs
+
+# history
+# <2018-08-09 Thu 10:50> first draft
+
+#+begin_src emacs-lisp -n
+  (defun org-not-nil (v)
+    "If V not nil, and also not the string \"nil\", then return V.
+  Otherwise return nil."
+    (and v (not (equal v "nil")) v))
+#+end_src

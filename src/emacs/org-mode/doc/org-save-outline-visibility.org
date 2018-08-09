@@ -1,0 +1,28 @@
+#+title: org-save-outline-visibility
+#+subtitle: ツリーの表示状態を保存した上でbodyを実行する
+#+date: <2018-08-09 Thu 13:14>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 13:14> first draft
+
+#+begin_src emacs-lisp -n
+  (defmacro org-save-outline-visibility (use-markers &rest body)
+    "Save and restore outline visibility around BODY.
+  If USE-MARKERS is non-nil, use markers for the positions.
+  This means that the buffer may change while running BODY,
+  but it also means that the buffer should stay alive
+  during the operation, because otherwise all these markers will
+  point nowhere."
+    (declare (debug (form body)) (indent 1))
+    (org-with-gensyms (data)
+      `(let ((,data (org-outline-overlay-data ,use-markers)))
+         (unwind-protect
+             (prog1 (progn ,@body)
+               (org-set-outline-overlay-data ,data))
+           (when ,use-markers
+             (dolist (c ,data)
+               (when (markerp (car c)) (move-marker (car c) nil))
+               (when (markerp (cdr c)) (move-marker (cdr c) nil))))))))
+#+end_src

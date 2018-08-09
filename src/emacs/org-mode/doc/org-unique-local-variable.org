@@ -1,0 +1,19 @@
+#+title: org-unique-local-variables
+#+subtitle: 他のバッファと共有しないローカル変数の定義
+#+date: <2018-08-09 Thu 14:07>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 14:07> first draft
+
+#+begin_src emacs-lisp -n
+  (defconst org-unique-local-variables
+    '(org-element--cache
+      org-element--cache-objects
+      org-element--cache-sync-keys
+      org-element--cache-sync-requests
+      org-element--cache-sync-timer)
+    "List of local variables that cannot be transferred to another buffer.")
+#+end_src
+

@@ -1,0 +1,17 @@
+#+title: org-get-alist-option
+#+subtitle: alistからキーをもとに値を取り出す
+#+date: <2018-08-09 Thu 11:19>
+#+author: conao
+#+orglyth-tags: org-mode org-macs
+
+# history
+# <2018-08-09 Thu 11:19> first draft
+
+#+begin_src emacs-lisp -n
+  (defsubst org-get-alist-option (option key)
+    (cond ((eq key t) t)
+          ((eq option t) t)
+          ((assoc key option) (cdr (assoc key option)))
+          (t (let ((r (cdr (assq 'default option))))
+               (if (listp r) (delq nil r) r)))))
+#+end_src

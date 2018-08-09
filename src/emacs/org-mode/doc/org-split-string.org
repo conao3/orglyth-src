@@ -1,0 +1,25 @@
+#+title: org-split-string
+#+subtitle: 文字列をセパレーターにより分割する
+#+date: <2018-08-09 Thu 10:44>
+#+author: conao
+#+orglyth-tags: org-mode org-macs
+
+# history
+# <2018-08-09 Thu 10:44> first draft
+
+#+begin_src emacs-lisp -n
+  (defun org-split-string (string &optional separators)
+    "Splits STRING into substrings at SEPARATORS.
+
+  SEPARATORS is a regular expression.  When nil, it defaults to
+  \"[ \f\t\n\r\v]+\".
+
+  Unlike `split-string', matching SEPARATORS at the beginning and
+  end of string are ignored."
+    (let ((separators (or separators "[ \f\t\n\r\v]+")))
+      (when (string-match (concat "\\`" separators) string)
+        (setq string (replace-match "" nil nil string)))
+      (when (string-match (concat separators "\\'") string)
+        (setq string (replace-match "" nil nil string)))
+      (split-string string separators)))
+#+end_src

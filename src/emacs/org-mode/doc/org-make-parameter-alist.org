@@ -1,0 +1,19 @@
+#+title: org-make-parameter-alist
+#+subtitle: listからalistに変換する
+#+date: <2018-08-09 Thu 13:44>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 13:44> first draft
+
+#+begin_src emacs-lisp -n
+  (defun org-make-parameter-alist (flat)
+    "Return alist based on FLAT.
+  FLAT is a list with alternating symbol names and values.  The
+  returned alist is a list of lists with the symbol name in car and
+  the value in cdr."
+    (when flat
+      (cons (list (car flat) (cadr flat))
+            (org-make-parameter-alist (cddr flat)))))
+#+end_src

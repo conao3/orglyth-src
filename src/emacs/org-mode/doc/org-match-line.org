@@ -1,0 +1,16 @@
+#+title: org-match-line
+#+subtitle: 与えられた正規表現で行頭から検索する
+#+date: <2018-08-09 Thu 13:09>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 13:09> first draft
+
+#+begin_src emacs-lisp -n
+  (defun org-match-line (regexp)
+    "Match REGEXP at the beginning of the current line."
+    (save-excursion
+      (beginning-of-line)
+      (looking-at regexp)))
+#+end_src

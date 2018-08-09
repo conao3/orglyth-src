@@ -1,0 +1,15 @@
+#+title: org-rm-props
+#+subtitle: 
+#+date: <2018-08-09 Thu 11:14>
+#+author: conao
+#+orglyth-tags: org-mode org-macs const
+
+# history
+# <2018-08-09 Thu 11:14> first draft
+
+#+begin_src emacs-lisp -n
+  (defconst org-rm-props '(invisible t face t keymap t intangible t mouse-face t
+                                     rear-nonsticky t mouse-map t fontified t
+                                     org-emphasis t)
+    "Properties to remove when a string without properties is wanted.")
+#+end_src

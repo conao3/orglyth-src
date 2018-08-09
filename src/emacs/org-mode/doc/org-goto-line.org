@@ -1,0 +1,16 @@
+#+title: org-goto-line
+#+subtitle: goto-lineのマイナーチェンジ版
+#+date: <2018-08-09 Thu 12:58>
+#+author: conao
+#+orglyth-tags: emacs elisp org-mode org-macs
+
+# history
+# <2018-08-09 Thu 12:59> first draft
+
+#+begin_src emacs-lisp -n
+  (defsubst org-goto-line (N)
+    (save-restriction
+      (widen)
+      (goto-char (point-min))
+      (forward-line (1- N))))
+#+end_src
