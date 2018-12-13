@@ -1,0 +1,552 @@
+#+title: Makefileで.emacs.dの理想的なディレクトリ構造を生成する話
+#+date: <2018-12-05 Wed 01:56>
+#+tags: emacs, make, dotfiles
+
+* はじめに
+この記事は [[https://qiita.com/advent-calendar/2018/emacs][Emacs Advent Calendar 2018 - Qiita]] の8日目の記事です。
+
+前日は私の「[[https://qiita.com/conao3/items/851f6dea9e94ce73f385][Makefileで.emacs.dの理想的なディレクトリ構造を生成する話]]」でした。
+
+* モチベーション
+「[[https://qiita.com/conao3/items/851f6dea9e94ce73f385][Makefileで.emacs.dの理想的なディレクトリ構造を生成する話]]」で紹介したように、
+私はレガシーEmacsでも「程々に」動くようにしたいという動機でEmacs-22から動作する
+[[https://github.com/jwiegley/use-package][use-package]]と同様のDSLを提供する[[https://github.com/conao3/leaf.el][leaf.el]]を開発しています。
+
+さて、ソフトウェアを開発する際はデグレードがよく発生します。
+単純なデグレードを防ぐには、あるコミットまでに達成できたケースを
+アップデートしたソフトでも変わらず実行できるか確かめる方法があります。
+
+テストとマージを短い間隔で行う開発手法を「継続的インテグレーション」と呼ぶ？
+あまり詳しくないので避けると、とりあえずテストケースは正常に動くことが保証されたソフトが開発できます。
+
+Travis Clを使いますが、使っているのはただ単にGitHubのトップページに「build:passing」の
+バッチがついてるとかっこいいなと思うからです。はい動機終わり。
+
+なお、個人のEmacsのパッケージ等はビルドとテストにかかる時間も短いので、
+私は「すべてのコミットの前にターゲットバージョンですべてのテストが通る」ことを確認しています。
+そんなコミットする前にいちいちテストの終了を待つなんて意識高いなと思わないでください。
+ただ単にTravis Clでfailした履歴を残したくないだけです。
+
+* Ertとの違い
+EmacsにはEmacs-24から標準添付されているErtというユニットテストフレームワークが存在します。
+leaf.elは初期の段階ではErtを使用しており、Emacs-23とEmacs-22のテストはまた後で考えればいいやと思っていました。
+
+しかしErtを使っていた時に、「[[https://travis-ci.org/conao3/leaf.el/jobs/451882801][明らかにpassするはずなのにfailする]]」「[[https://travis-ci.org/conao3/leaf.el/builds/449134718][Emacs-24だけfailする]]」
+「[[https://travis-ci.org/conao3/leaf.el/jobs/449134720][結局どこを直せばいいのか情報が得られない]]」などのきっかけで自分で作ることになってしまいました。
+
+「結局どこを直せばいいのか情報が得られない」からひとつだけ出力を抜き出します。
+さて、このテストケースを通すためには一体何をすればいいのか、この出力からは全くと言っていいほどわかりません。
+
+#+BEGIN_SRC emacs-lisp
+  0.35s$ make test
+  /tmp/emacs/bin/emacs -Q --batch -L ./ -l leaf-tests.el -f leaf-run-tests-batch-and-exit
+  test with ert.
+  GNU Emacs 24.5.1 (x86_64-unknown-linux-gnu)
+   of 2016-04-24 on testing-worker-linux-docker-199c7fe1-3369-linux-7
+  Running 10 tests (2018-11-01 00:33:55+0000)
+  Test leaf-test/:if-1 backtrace:
+    pcase--u1(((match val quote (if t (progn (require (quote foo) nil ni
+    pcase--u((((match val quote (if t (progn (require (quote foo) nil ni
+    pcase--expand((expand-minimally (if t (progn (require (quote foo) ni
+    #[385 "\301\"@\232\203 \211A@\262\232\203 \211\211AA\262\
+    macroexpand((pcase (expand-minimally (if t (progn (require (quote fo
+    ert--expand-should-1((should (pcase (expand-minimally (if t (progn (
+    ert--expand-should((should (pcase (expand-minimally (if t (progn (re
+    #[257 "\300\301D\302#\207" [ert--expand-should should #[771 "\300
+    (should (pcase (expand-minimally (if t (progn (require (quote foo) n
+    (match-expansion (if t (progn (require (quote foo) nil nil))) (quote
+    (closure (t) nil (match-expansion (if t (progn (require (quote foo) 
+    #[0 "\306\307!r\211q\210\310\311\312\313\314\315!\316\"\317\320%DC
+    funcall(#[0 "\306\307!r\211q\210\310\311\312\313\314\315!\316\"\31
+    ert--run-test-internal([cl-struct-ert--test-execution-info [cl-struc
+    #[0 "r\304 q\210\305 )\306\307\310\311\312\313!\314\"\315\316%DC\2
+    funcall(#[0 "r\304 q\210\305 )\306\307\310\311\312\313!\314\"\315\
+    ert-run-test([cl-struct-ert-test leaf-test/:if-1 nil (closure (t) ni
+    ert-run-or-rerun-test([cl-struct-ert--stats t [[cl-struct-ert-test l
+    ert-run-tests(t #[385 "\306\307\"\203D\211\211G\310U\203\211@\20
+    ert-run-tests-batch(nil)
+    ert-run-tests-batch-and-exit()
+    leaf-run-tests-batch-and-exit()
+    command-line-1(("-L" "./" "-l" "leaf-tests.el" "-f" "leaf-run-tests-
+    command-line()
+    normal-top-level()
+  Test leaf-test/:if-1 condition:
+      (error "Unknown upattern `(quote (if t (progn (require (quote foo) nil nil))))'")
+     FAILED   1/10  leaf-test/:if-1
+#+END_SRC
+
+GUIからインタラクティブにテスト実行できるのですが、テストの宣言場所までジャンプするくらいの機能だけしか
+発見できず、Ertを使うのは諦めてしまいました。。
+
+私の作ったcort.elでは荒削りなものの、デバッグのきっかけになりそうな情報は与えてくれます。
+
+[写真]
+
+- 1つ目
+  ~<ERROR>~ となっているので「エラーが起こったのだな」とすぐ分かります。
+  エラーの詳細は ~Unexpected-error: (void-function equa)~ と出力されており、
+  よく見ると ~Tested with :equa~ とあります。
+  
+  つまり ~(equal 'a 'a)~ というテストケースを定義したつもりだったものの、
+  ~(equa 'a 'a)~ を実行しているということです。タイポですか。。
+
+- 2つ目
+  ~[FAILED]~ となっているので、実行は出来たものの、期待する値にならなかったということです。
+  ~(+ 1 3)~ が与えられ、その返り値として ~4~ が返ってきた。期待する値は ~5~ 。
+  （2つの値の比較は ~=~ で行った）という情報が得られ、すぐデバッグできます。
+
+- 3つ目
+  ~<ERROR>~ となっているのでエラーが起こっていますが、このテストケースは後述するように
+  「特定のエラーを期待するテストケース」です。
+  それを示すように ~Expected-error: 'arith-error~ と表示されています。
+
+  しかしその下には ~Unexpected-error: (void-function a)~ と表示されており、
+  期待しないエラーが起こっていることが一目瞭然です。
+  このテストケースにおいても、実行したS式がわかりやすく示されており、
+  デバッグに必要な情報を得ることが出来ます。
+
+パッケージのテストを行う時は、ほとんどの方が「-q」や「-Q」オプションを付けられていると思います。
+これは自分のローカル設定を読み込まず、起動を早くする側面もあると思いますが、
+第一には問題の切り分けをしやすくするためだと思います。
+
+その点、cort.elは1ファイルで完結しており、
+ごてごてしたパッケージをパッケージマネージャでダウンロードして、、、という過程を踏む必要がありません。
+
+基本的にはcort.elをユーザーの方のレポジトリに放り込んでもらうことを想定してます。
+もちろんsubmoudleで持ってもいいんですが、たかだか1ファイルにそこまでする？という思いがします。
+
+* build:passingしたい！
+とりあえず ~build:passing~ したい！という方もいると思うので、まずは場面設定から。
+
+** Makefile
+昨日の記事に次いでMakefile作ります。特にやることもなく、素直に書きます。
+
+EMACSの等号が ~?=~ なのはタイポではなく、「外部から値を与えられた場合、その値を採用する」
+という意味に解釈されます。
+
+コメントに書かれていますが、例えば単に ~make check~ と実行すると、 ~emacs~ で実行されます。
+~EMACS=emacs-26.1 make check~ と実行すると、 ~emacs-26.1~ でテストが実行されるようになります。
+#+BEGIN_SRC makefile
+  TOP       := $(dir $(lastword $(MAKEFILE_LIST)))
+
+  EMACS     ?= emacs
+
+  LOAD_PATH := -L $(TOP)
+  BATCH     := $(EMACS) -Q --batch $(LOAD_PATH)
+
+  ELS       := cort.el         # compiling .el list
+  ELCS      := $(ELS:.el=.elc)
+
+  all: build
+
+  build: $(ELCS)
+
+  %.elc: %.el
+            @printf "Compiling $<\n"
+            @$(BATCH) -f batch-byte-compile $<
+
+  check: build
+  # If byte compile for specific emacs,
+  # set EMACS such as `EMACS=emacs-26.1 make check`.
+            $(BATCH) -l cort-tests.el -f cort-run-tests
+
+  clean:
+            -find . -type f -name "*.elc" | xargs rm
+#+END_SRC
+
+** .travis.yml
+use-packageの.travis.ymlを多分に参考にして、このように書きます。
+実際よくわかってません。
+#+BEGIN_SRC bash
+  language: generic
+  sudo: false
+
+  env:
+    global:
+      - CURL="curl -fsSkL --retry 9 --retry-delay 9"
+    matrix:
+    - EMACS_VERSION=23.4
+    - EMACS_VERSION=24.5
+    - EMACS_VERSION=25.3
+    - EMACS_VERSION=26.1
+    - EMACS_VERSION=master
+  install:
+    - $CURL -O https://github.com/npostavs/emacs-travis/releases/download/bins/emacs-bin-${EMACS_VERSION}.tar.gz
+    - tar xf emacs-bin-${EMACS_VERSION}.tar.gz -C /
+    - export EMACS=/tmp/emacs/bin/emacs
+
+  script:
+    - make
+    - make check
+#+END_SRC
+
+** cort-test.el
+cort.elが検証するテストケースをつらつら書きます。
+キーワードは後述するので、雰囲気を感じ取ってもらえれば。
+#+BEGIN_SRC emacs-lisp
+  ;; require depends package
+  (require 'cort)
+
+  ;; if you need temporary functions for test, define this.
+  (defun quote-a ()
+    'a)
+
+  (defmacro sym (x)
+    `',x)
+
+  ;; define test cases.
+  (cort-deftest simple:equal
+    (:equal '(a b c) '(a b c)))
+
+  (cort-deftest simple:=
+    (:= 100 100))
+
+  (cort-deftest quote-a:0
+    (:eq 'a 'a))
+
+  (cort-deftest quote-a:1
+    (:eq (quote-a) 'a))
+
+  (cort-deftest sym:1
+    (:eq (sym a) 'a))
+
+  (cort-deftest sym:4
+    (:equal (sym (a b c)) '(a b c)))
+
+  (cort-deftest error-test
+    (:= (+ 1 2) 5))
+
+  (cort-deftest err:1
+    (:cort-error 'void-function
+            (a 'a)))
+
+  (cort-deftest err:3
+    (:cort-error 'arith-error
+            (/ 1 0)))
+
+  (cort-deftest cort-if:2
+    (:eq 'a
+         ('b
+          :cort-if (nil 'c)
+          :cort-if (t 'a))))
+
+  (cort-deftest cort-emacs=:0
+    (:= 10
+        (0
+         :cort-emacs> (0 10))))
+  ;; ...cort-test.el
+#+END_SRC
+
+~:cort-if~ や ~:cort-eamcs~ キーワードを除いて、結構読みやすいテストケース定義
+が実現できていると思います。条件分岐キーワードは慣れないと見づらいかもしれません。
+cort.elのテストケースでも、クオートがついているS式はその値のまま保存され、クオートのついていないS式は
+評価されます。
+
+こうやってcort.elと設定ファイル2つを準備することによって、
+Travis Clで自動テストさせることが出来ます。
+Travis Clの使い方やバッチの貼り方などは他の人の記事に譲り、cort.elのシンタックスを説明したいと思います。
+* シンタックス
+** はじめに
+~cort-deftest~ は基本的に次の構成になっています。
+#+BEGIN_SRC emacs-lisp
+  (cort-deftest 'TESTCASE-NAME
+    (SEXP))
+#+END_SRC
+そして ~(SEXP)~ が ~t~ になることを期待します。
+*** ~(SEXP)~ の構造
+~(SEXP)~ は ~(:SYMBOL GIVENFORM EXPECTFORM)~ になっています。
+
+~:SYMBOL~ がcort.elが解釈する特別なキーワードでない場合、 ~:SYMBOL~ から ~:~ を取った、
+~(SYMBOL GIVENFORM EXPECTFORM)~ を実行し、このS式が ~t~ を返せばpassします。
+
+~:SYMBOL~ としているのはキーワードシンボルとして認識されるので、赤色になって見やすいからです。
+それ以上の意味はなかったのですが、 ~eq~, ~eqn~, ~equal~, ~=~ など自分の好きな関数を比較関数として実行でき、
+とても自由度の高いテストケース表記ができるようになったかなと思います。
+
+*** ~FORM~
+~GIVENFORM~ と ~EXPECTFORM~ をまとめて ~FORM~ と記述することにします。
+~FORM~ は定数式、関数、マクロの形式を受け取ります。
+
+つまり ~GIVENFORM~ が定数で ~EXPECTFORM~ が評価されるべき式を指定しても普通に動きます。
+混乱するのでやめたほうが良いと思いますが。。
+
+マクロが渡された場合、展開して評価されます。まぁ普通のマクロと同じです。
+マクロの展開だけをテストしたい場合は ~(macroexpand MACRO)~ を渡せばよいです。
+この動作を実現する便利マクロは後述します。
+
+** ~:cort-error~ キーワード
+~:cort-error~ を ~SYMBOL~ の位置に置くとそのテストケースはエラーを期待するテストケースとなります。
+実際には ~GIVENFORM~ を実行したときに ~EXPECTFORM~ に指定したエラーが出ることを検証します。
+
+~EXPECTFORM~ におけるエラーの型は[[https://www.gnu.org/software/emacs/manual/html_node/elisp/Standard-Errors.html#Standard-Errors][Appendix F Standard Errors]]を参照してください。
+
+** ~:cort-if~ キーワード
+~FORM~ を条件式によって分岐させたい場面があると思います。
+たとえばあるオプションを有効にしているときのパッケージの挙動のテストなどです。
+
+私が遭遇したのはやはりEmacs-23以前で ~(macroexpand-1)~ が定義できないので
+~EXPECTFORM~ をバージョンで分岐させたいという動機でした。
+
+さて、 ~FORM~ は即値（そのまま評価できる）か ~:cort-if~ で分岐されるべき2つ以上の値
+かになるわけですが、その両立にめちゃくちゃ悩んで次の文法にしました。
+
+#+BEGIN_SRC emacs-lisp
+  ;; cort-ifを使わない場合。このテストケースはfailします。
+  (cort-deftest cort-if-test:1
+    (:eq 'a
+         'b))
+
+  ;; cort-ifを使う場合。
+  ;; cort-ifは (COND FORM-A) を受け取り、CONDがtのときFORM-AをFORMの値として採用します。
+  ;; すべてのcort-ifのCONDがnilの場合、一番最初に書かれた値をFORMとして採用します。
+  (cort-deftest cort-if-test:2
+    (:eq 'a
+         ('b
+          :cort-if (t 'a))))
+#+END_SRC
+はい。妥協です。もっと簡潔な表現を考えついたぜ！というかたはぜひ[[https://github.com/conao3/cort.el/issues][issueを書いて]]もらえると助かります。
+~:corf-if~ のCONDはもちろん関数やマクロが受け取れます。
+
+また ~:cort-if~ は複数置くこともできます。その場合は全ての ~:cort-if~ のCONDが
+nilになった場合、一番最初のデフォルト値を採用します。
+
+** ~:cort-emacs~ キーワード
+実際には下記のキーワードです。
+
+- ~:cort-emacs<~
+- ~:cort-emacs<=~
+- ~:cort-emacs=~
+- ~:cort-emacs>=~
+- ~:cort-emacs>~
+
+Emacsのバージョンで分岐するのはよくあるケースなので、特別なキーワードを用意しました。
+#+BEGIN_SRC emacs-lisp
+  (cort-deftest cort-emacs:a0
+    (:= 10
+	(0
+	 :cort-emacs> (0 10))))
+
+  (cort-deftest cort-emacs:a1
+    (:= 10
+	(0
+	 :cort-if ((not
+		   (funcall (intern "version<") emacs-version "0"))
+		  10))))
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (cort-deftest cort-emacs:b0
+    (:= 10
+	(0
+	 :cort-emacs<= (0 10))))
+
+  (cort-deftest cort-emacs:b1
+    (:= 10
+	(0
+	 :cort-if (((funcall (intern "version<=") emacs-version "0")
+		   10)))))
+#+END_SRC
+
+内部的には ~:cort-emacs~ キーワードは単なる ~:cort-if~ キーワードに置き換えられて実行されます。
+つまりcort-emacs:a0テストケースはcort-emacs:a1と同じテストケースということになります。
+
+cort-emacs:b0もcort-emacs:b1と同じように解釈されます。
+~version<~ という関数があるので、その方向の比較はそのまま展開されますが、
+~version>~ という関数はないので、a1の方では ~not~ を使って等価な条件式を自動生成していますね。
+
+* マクロでのテストケースの生成の例
+** ~match-expansion~
+テストケースにおいて何度も使われる部分がある場合、マクロで生成したくなると思います。
+例えばleaf.elというパッケージを書いていたときは、下記のようなテストケースが多発しました。
+
+#+BEGIN_SRC emacs-lisp
+  (cort-deftest leaf-test/:if-1
+    (:equal
+     (macroexpand-1 '(leaf foo :if t))
+     '(if t
+	   (progn
+	     (require (quote foo))))))
+
+  (cort-deftest leaf-test/:if-2
+    (:equal
+     (macroexpand-1 '(leaf foo :if (and t t)))
+     '(if (and t t)
+	   (progn
+	     (require (quote foo))))))
+
+  (cort-deftest leaf-test/:if-3
+    (:equal
+     (macroexpand-1 '(leaf foo :if nil))
+     '(if nil
+	   (progn
+	     (require (quote foo))))))
+#+END_SRC
+
+これを見ると、 ~GIVENFORM~ は与えられた[[https://github.com/conao3/leaf.el][leaf.el]]を ~macroexpand-1~ し、
+~equal~ で ~EXPECTFORM~ と比較しています。
+
+そこで次のようなテストケースを生成するマクロを定義することができ、これは期待通りに動きます。
+この例で閉じたものにするために、leaf.elの簡略版も定義します。
+
+#+BEGIN_SRC emacs-lisp
+  ;; test target macro
+  (defmacro package-require (package)
+    `(require ,package))
+
+  ;; Macro to expand FORM and compare it with EXPECT for equal test case
+  (defmacro match-expansion (form expect)
+    (if (fboundp 'macroexpand-1)
+	`(:equal (macroexpand-1 ',form) ,expect)
+      `(:equal (macroexpand ',form) ,expect)))
+
+  (cort-deftest match-expansion0
+    (match-expansion
+     (package-require 'use-package)
+     '(require 'use-package)))
+
+  (cort-deftest match-expansion1
+    (:equal (macroexpand '(package-require 'use-package))
+	     '(require 'use-package)))
+#+END_SRC
+
+この例では ~match-expansion0~ と ~match-expansion1~ は同じテストケースとして解釈されます。
+
+~match-expansion0~ のほうがテストケースに本当に必要な部分が書かれており、
+~:equal~ や ~macroexpand~ を隠蔽できているのでテストを簡単に書くことができます。
+
+** ~leaf-match~
+前述したようにEmacs-22やEmacs-23では ~macroexpand-1~ が定義できません。
+そのため必ず ~:cort-emacs~ キーワードでテストケースの分岐をしないといけないのですが、
+その指定を隠蔽できます。
+#+BEGIN_SRC emacs-lisp
+  (defmacro leaf-match (form expect)
+    "Return testcase for cort.
+  Since `macroexpand-1' is not defined in Emacs below 23.0, use this macro.
+  EXPECT is (expect-default expect-24)"
+    `(match-expansion
+      ,form
+      (,(car expect)
+       :cort-if ((not (fboundp 'macroexpand-1)) ,(cadr expect)))))
+
+  (cort-deftest leaf-test/:simple-when
+    (leaf-match
+     (leaf foo :when t)
+     ('(when t
+	 (progn
+	   (require 'foo)))
+      '(if t
+	   (progn
+	     (progn
+	       (require 'foo)))))))
+
+  (cort-deftest leaf-test/:simple-when-without-macro
+    (match-expansion
+     (leaf foo :when t)
+     ('(when t
+	 (progn
+	   (require 'foo)))
+      :cort-if ((not (fboundp 'macroexpand-1))
+		'(if t
+		     (progn
+		       (progn
+			 (require 'foo))))))))	      
+#+END_SRC
+実際にはバージョンではなく、 ~macoroexpand-1~ が定義されているかどうかで分岐しています。
+このようにマクロを使って本質的なところだけを抽出して効率的にテストケースを記述できます。
+
+* おまけ
+** 複数バージョンでのテスト
+レガシーEmacsをサポートするという縛りプレイを行う時は、
+コマンド一発ですべてのバージョンのテストが実行できると嬉しいです。
+
+そこで実際には下記のMakefileを使っています。
+
+#+BEGIN_SRC makefile
+  all:
+
+  include Makefunc.mk
+
+  TOP        := $(dir $(lastword $(MAKEFILE_LIST)))
+  EMACS_RAW  := $(filter-out emacs-undumped, $(shell compgen -c emacs- | xargs))
+  ALL_EMACS  := $(strip $(sort $(EMACS_RAW)))
+
+  EMACS      ?= emacs
+
+  LOAD_PATH  := -L $(TOP)
+  ARGS       := -Q --batch $(LOAD_PATH)
+  BATCH      := $(EMACS) $(ARGS)
+
+  ELS        := leaf.el
+  ELCS       := $(ELS:%.el=%.elc)
+
+  LOGFILE    := .make-test.log
+
+  ##################################################
+
+  all: git-hook build
+
+  git-hook:
+  # cp git hooks to .git/hooks
+          cp -a git-hooks/* .git/hooks/
+
+  build: $(ELCS)
+
+  %.elc: %.el
+          @printf "Compiling $<\n"
+          @$(BATCH) -f batch-byte-compile $<
+
+  check: # build
+  # If byte compile for specific emacs,
+  # set specify EMACS such as `EMACS=emacs-26.1 make check`.
+          $(MAKE) clean --no-print-directory
+          $(BATCH) -l leaf-tests.el -f cort-run-tests
+
+  allcheck: $(ALL_EMACS:%=.make-check-%)
+          @echo ""
+          @cat $(LOGFILE) | grep =====
+          @rm $(LOGFILE)
+
+  .make-check-%:
+          EMACS=$* $(MAKE) check --no-print-directory 2>&1 | tee -a $(LOGFILE)
+
+  # silent `allcheck' job
+  test: $(ALL_EMACS:%=.make-test-%)
+          @echo ""
+          @cat $(LOGFILE) | grep =====
+          @rm $(LOGFILE)
+
+  .make-test-%:
+          EMACS=$* $(MAKE) check --no-print-directory 2>&1 >> $(LOGFILE)
+
+  updatecort:
+          cp -f ../cort.el/cort.el ./
+
+  clean:
+          -find . -type f -name "*.elc" | xargs rm
+#+END_SRC
+
+テスト数が多くなってくると表示が煩雑になるので、通常は静かな ~make test~ を使っています。
+
+あと、冒頭のアニメーションGIFは ~make allcheck~ と ~make test~ を録画したものです。
+** コミット前にテストする
+僕が開発しているパッケージは「テストが通らないコミットはしない」運用になっています。
+
+わざとレビュワーがブランチ切って通らないテストケースを書いて、コミッタがそのテストを通るように
+直した後マージする方法もあると思いますが、これは個人開発でテストも軽いため、この運用にしています。
+
+さて、gitにはcommitなどの前にスクリプトを実行させることが出来て、そのスクリプトが異常終了した際に
+commitなどを拒否する設定にできます。
+
+実際には次のファイルを ~pre-commit~ という名前で実行権限を付けて ~.git/hooks/~ に配置するだけです。
+#+BEGIN_SRC shell
+  #!/bin/sh
+  #
+
+  make test
+#+END_SRC
+
+私のMakefileでは ~all~ ジョブでプロジェクトのルートに ~git-hooks~ というディレクトリがあって、
+その中にあるファイル群を ~.git/hooks/~ にコピーするようになっています。
+
+実際この運用で多くのデグレードを未然に避けることが出来たので、
+条件が許す際はぜひ使ってみてもらえるといいかなと思います。

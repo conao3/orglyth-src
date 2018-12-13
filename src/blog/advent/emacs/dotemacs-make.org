@@ -1,0 +1,666 @@
+#+title: Makefileで.emacs.dの理想的なディレクトリ構造を生成する話
+#+date: <2018-12-05 Wed 01:56>
+#+tags: emacs, make, dotfiles
+
+* はじめに
+この記事は [[https://qiita.com/advent-calendar/2018/emacs][Emacs Advent Calendar 2018 - Qiita]] の7日目の記事です。
+
+前日はtadsanさんの「[[https://qiita.com/tadsan/items/f23d6db8efc0fcdcd225][カーソルを変更する]]」でした。
+
+* モチベーション
+「 ~.emacs.d~ のディレクトリ構成のベストプラクティスってなんなんだろう」と思って検索したことは
+Emacsのカスタマイズをする際に一度や二度あると思います。
+
+そして +ネタかぶりしてます+ 。頻繁に語られる活発な話題と思ってもらえればと。。
+- [[https://qiita.com/ytkt/items/2df2e2e93fb0a066a7de][ぼくのかんがえたさいきょうの.emacs.d - Qiita]]
+- [[https://qiita.com/yynozk/items/7dce94f770e6f3f0b26c][.emacs.d を公開しました - Qiita]]
+- [[http://www.sakito.com/2009/12/emacsd.html][.emacs.d の利用 - 技術的生存報告記]]
+
+最終的に好みなディレクトリ構造をそれぞれ見つけていくと思うんですが、
+今回は「ぼくのかんがえたさいきょうの.emacs.dのディレクトリ構造」を提案するとともに
+Makeでそのディレクトリ構造を生成するMakefileを紹介します。
+
+** （自分にとっての）モチベーション
+私は「どこでもEmacsが程々に動いてほしい」と思っており、他の方とは考え方が違うかもしれません。
+
+大学の計算機室のパソコンにはEmacs-22がインストールされており、
+もちろん管理者権限がない中、一度~/localでソースからビルドしましたがaptが行う依存解決を手でするのは大変で、
+軽く半日かかりました。
+
+ただバニラEmacsはタブモードであったり、色んな所にバックアップファイルを撒き散らしたり
+（普段は一箇所にまとめて作成させるようにしている）などとても許容できません。
+
+一方 ~use-package~ のわかりやすいDSL的設定の書き方はとても感動し、すべてのパッケージの設定を
+~use-package~ で書いていますが、Emacs-24からしか動作しません。
+
+これはEmacs-22でも動く ~use-package~ もどきを作るしかないじゃないかということで
+[[https://github.com/conao3/leaf.el][leaf.el]]なるパッケージを作り始めました。
+
+標準添付テスターのertもEmacs-24からですし、パッケージマネージャのpackage.elも
+Emacs-23からの対応なので、それぞれEmacs-22から動作する[[https://github.com/conao3/cort.el][cort.el]]、[[https://github.com/conao3/feather.el][feather.el]]
+を作成することになります。
+
+手元でレガシーEmacsの挙動を確かめるためには複数バージョンのEmacsを飼うのが一番手っ取り早いわけで、
+その特殊な状況の.emacs.dの構成であることを了承いただけばと思います。
+
+ただ、[[https://github.com/conao3/dotfiles/commit/fd06cea5dd040ec1fb34225a3f3202200e00801e][8月]]から試行錯誤を繰り返してようやく完成が見え始めましたので書き記す次第です。
+
+* 他の人のディレクトリ構造の調査
+** [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Init-File.html][Emacs manual]]
+最も信頼できるソースですが、init.elをどこから探すか。という話題に注力していて、
+.emacs.dディレクトリを採用する場合のそのディレクトリ構造を示したりはしていないようです。
+
+（ちなみにここらへんの話題についてはtadsanさんの[[https://qiita.com/tadsan/items/4f5743de21b7aa06ca35][Emacsを起動する - Qiita]]が詳しいです。）
+** [[https://www.oreilly.co.jp/books/9784873112770/][入門 GNU Emacs 第3版]] - O'Reilly
+最も参考にしたい本ですが、2007年の本で.emacsファイルを使用することになっています。残念。
+** [[http://gihyo.jp/book/2017/978-4-7741-9235-2][Emacs実践入門]] - [[http://d.hatena.ne.jp/tomoya/][id:tomoya]]
+我々のバイブル(の初版)は下記のディレクトリ構造を推薦されています。
+#+begin_example
+  .emacs.d/
+  ├── init.el         -> 設定ファイル
+  ├── conf/           -> 分割設定用ディレクトリ
+  ├── elisp/          -> Elispインストールディレクトリ
+  ├── elpa/           -> ELPA用のディレクトリ
+  ├── public_repos/   -> 公開レポジトリをチェックアウトするディレクトリ
+  ├── etc/            -> etc用ディレクトリ
+  └── info/           -> infoファイル用ディレクトリ
+#+end_example
+(改定新板で更新があったのかは手元にないので分からないです。。)
+** [[https://github.com/jwiegley/dot-emacs][jwiegley/dot-emacs]]
+use-pacakge作者、jwiegleyさんの.emacs.d。省略あり。
+
+基本的な「パッケージの設定」はルートディレクトリ、「自作パッケージ」は ~lisp/~ 、
+「package.elでダウンロードしたパッケージ」は ~elpa/~ に入れるようになっているようです。
+
+もちろん.gitignoreしてあり、そもそも目に見えるファイルも省略してるので参考程度に。
+#+begin_example
+  .emacs.d/
+  ├── init.el         -> 設定ファイル
+  ├── doc/EmacsWiki/  -> 設定ファイル
+  ├── lisp/           -> 自作Elispインストールディレクトリ
+  ├── elpa/           -> Elispインストールディレクトリ
+  └── snippets/       -> yasnippet用スニペットディレクトリ
+#+end_example
+
+* 提案するディレクトリ構造
+上記調査を踏まえ、また自分の経験や他の人の知見を含め、以下のディレクトリ構造を提案します。
+#+begin_example
+  .
+  ├── Makefile
+  ├── Makefunc.mk
+  ├── init.el
+  ├── conf/
+  │   ├── 00_leaf.el
+  │   ├── 01_core-emacs.el
+  │   ├── 10_standard-elisp.el
+  │   ├── 20_editor.el
+  │   ├── 30_utility.el
+  │   └── 40_major-mode.el
+  ├── site-lisp/
+  │   ├── cort.el/
+  │   ├── dash.el/
+  │   ├── f.el/
+  │   ├── feather.el/
+  │   ├── leaf.el/
+  │   ├── org-mode/
+  │   ├── orglyth.el/
+  │   ├── s.el/
+  │   └── use-package/
+  ├── snippets/
+  ├── templete/
+  └── local/
+      ├── conao-mixed-raw.el
+      ├── conao-mixed.el
+      ├── 22.1/
+      │   ├── build/
+      │   │   ├── conao-mixed.el -> ../../conao-mixed.el
+      │   │   └── conao-mixed.elc
+      │   │   snippets/ -> ../../snippets/
+      │   │   templete/ -> ../../templete/
+      │   └── site-lisp/
+      │       ├── cort.el/
+      │       ├── ...
+      │       └── use-pacakge/
+      ├── 23.4/
+      ├── 24.5/
+      ├── 25.3/
+      └── 26.1/
+#+end_example
+
+なお上記構造は以下の構造からmakeで自動生成します。つまり、この構成がgithubで見えることになります。
+#+begin_example
+  .
+  ├── Makefile
+  ├── Makefunc.mk
+  ├── init.el
+  ├── conf/
+  │   ├── 00_leaf.el
+  │   ├── 01_core-emacs.el
+  │   ├── 10_standard-elisp.el
+  │   ├── 20_editor.el
+  │   ├── 30_utility.el
+  │   └── 40_major-mode.el
+  ├── snippets/
+  └── templete/
+#+end_example
+
+このディレクトリ構造は以下の特徴を持っています。
+- メジャーバージョンの異なる、複数のEmacsを同時に使用できる。
+- 構造として最速の起動時間を実現するディレクトリ、ファイル構造。
+- elpaからダウンロード、コンパイルした.elcファイルはすべて ~local/[ver]/build/~ 以下に置かれる。
+- コンパイルが必要な場合、最小のコンパイルで完了する。
+
+バイトコンパイル事情に詳しくありませんが、メジャーバージョンが異なるEmacsでの
+動作は保証されていないなどの記述をどこかで見た気がするので、 ~build/~ と ~site-lisp/~ を
+それぞれのバージョンで持っています。共有できそうなsnippetやtempleteに関してはシンボリックリンクで共有します。
+
+~conf/~ の.elをまとめた ~conao-mixed.el~ は通常共有できませんが、
+そもそも複数バージョンで使われることを前提に[[https://github.com/conao3/leaf.el][leaf.el]]が開発されており、
+それを使って ~conf/~ を書いているため、共有できることになっています。
+
+ただ、それのバイトコンパイルファイルはそれぞれのバージョンで持っている状況になっています。
+
+* init.el
+とりあえずこのディレクトリ構造の作り方は置いといて(手動でも作れるので)、
+この構造ができたときに、init.elはどういう記述になるのか見ます。
+
+#+name: code:init-1
+#+caption: init.elのサンプル-1
+#+begin_src emacs-lisp
+  ;; enable debug
+  (setq debug-on-error  t
+        init-file-debug t)
+
+  (defun mkdir-if-missing (path &optional add-loadpath-p)
+    "Missing folder, create PATH and add PATH to load-path.
+  Parent folder also create if no exist.
+  If ADD-LOADPATH-P is non-nil, add maked directory to loadpath."
+    (unless (file-directory-p path) (make-directory path t))
+    (when add-loadpath-p (add-to-list 'load-path path)))
+
+  ;; if you run like 'emacs -q -l ~/hoge/init.el'
+  (progn
+    (when load-file-name
+      (setq user-emacs-directory
+            (expand-file-name (file-name-directory load-file-name))))
+    (setq user-emacs-directory
+          (format "%slocal/%s.%s/"
+                  user-emacs-directory emacs-major-version emacs-minor-version))
+
+    (mkdir-if-missing user-emacs-directory)
+    (mkdir-if-missing (locate-user-emacs-file "build/") t))
+
+  (if (require 'conao-mixed nil t)
+      (message "load conao-mixed.el")
+    (message "missing conao-mixed.el..."))
+
+  (provide 'init)
+  ;;; init.el ends here
+#+end_src
+
+localディレクトリやbuildディレクトリの存在しない場合をケアしていますが、
+後述のMakefileや新しいパッケージマネージャfeather.el(鋭意製作中)を使用して、
+それらのディレクトリの面倒を見る場合はもっと簡単に以下のように出来ます。
+
+#+name: code:init-2
+#+caption: init.elのサンプル-2
+#+begin_src emacs-lisp
+  ;; enable debug
+  (setq debug-on-error  t
+        init-file-debug t)
+
+  ;; if you run like 'emacs -q -l ~/hoge/init.el'
+  (progn
+    (when load-file-name
+      (setq user-emacs-directory
+            (expand-file-name (file-name-directory load-file-name))))
+    (setq user-emacs-directory
+          (format "%slocal/%s.%s/"
+                  user-emacs-directory emacs-major-version emacs-minor-version)))
+
+  (if (require 'conao-mixed nil t)
+      (message "load conao-mixed.el")
+    (message "missing conao-mixed.el..."))
+
+  (provide 'init)
+  ;;; init.el ends here
+#+end_src
+
+~user-emacs-directory~ を現在起動中のEmacsバージョンを利用して設定し直すことで、
+バージョンごとにEmacsから見えるディレクトリ完全に分離できます。
+
+[[http://peccu.hatenablog.com/entry/20130218/trial_init][お試しinit.el]]のテクニックで得られた起動時に動的に与えることのできるルートフォルダから
+更に ~local/[ver]~ とディレクトリを掘り、その場所を ~user-emacs-directory~ としています。
+
+あとはbuild下のconao-mixed(後述)をrequireするだけです。
+
+バイトコンパイルされたelに詳しくないのですが、メジャーバージョンが異なるEmacs同士で
+正常に実行できるか保証されていないようなので、複数バージョンのEmacsを飼う場合このような運用は必須です。
+
+* Makefile
+~make~ はC++やC#で作られた超巨大建築物に対して使用するものだと思っていましたが、
+実は並べたコマンドを実行するだけの一般的なツールで、
+定形作業をジョブとして保存しておき簡単に呼び出すことが出来ます。
+
+もちろん強力な依存関係解決能力を持っており、必要な作業を必要なだけ行うことが出来ます。
+またすべての依存関係を解決した後に作業に移るので、ジョブの独立性も把握でき、
+~-j[d]~ オプション(dは整数)を付けるだけで、最大d個のコマンドを並列に実行してくれます。
+
+「依存関係」に注目することでmakeは本来の力を出すことが出来ます。
+私はそれに気づいていなかったので「ダウンロードジョブ」「コンパイルジョブ」「デプロイジョブ」
+のようにジョブを作ってしまっていました。これはmakeの流儀に則っていません。
+
+大きなジョブを作成してしまうと依存関係が大きくなり、小さな粒度で再コンパイルなどができなくなります。
+
+「仕事」で考えるのではなく「ファイル」単位で考えることが大切だと先週ぐらいに気づきました。
+
+私のような無駄な試行錯誤をしないためにもオライリーの「[[https://github.com/jr4qpv/GNU_Make_3rd_jp][GNU Make 第3版]]」は時間を作ってみたほうが良いです。
+素晴らしいことに無料です。有志の方が各章を結合したPDFを作ってくださっています。
+** Makefunc.mk ファイル
+他のMakefileを編集するときの助けになりそうな関数群は、切り出してインポートする形にするほうが良いです。
+私はそのような関数群をMakefunc.mkというファイル名で保存して利用しています。
+
+とりあえず貼ります。
+#+begin_src makefile
+  #
+  # Makefunk.mk
+  #
+  # version: v1.8
+  # last update: 2018/12/04
+  #
+  # echo with color
+
+
+  ##################################################
+  #
+  #  strings utils
+  #
+
+  STRCUT    = $(shell echo $1 | awk -F $2 '{print $3}')
+  STRCUTREV = $(shell echo $1 | awk -F $2 '{print $$(NF-$3)}')
+
+  ##################################################
+  #
+  #  dictionary
+  #    (KEY)/(VAL) data class
+  #
+
+  MAKEDIC = $(join $(addsuffix /, $1), $2)
+  KEY2VAL = $(shell echo $1 | grep -Po '(?<=$2/)[^\s]+')
+  VAL2KEY = $(shell echo $1 | grep -Po '[^\s]+(?=/$2)')
+
+  ##################################################
+  #
+  #  color
+  #
+
+  ECHO_COLOR    = printf "%b\e[%bm=== %b ===\e[m%b\n" $3 $1 $2 $4
+  ECHO_COLOR-   = printf "%b\e[%bm%b\e[m%b" $3 $1 $2 $4
+
+  ECHO_BLACK    = $(call ECHO_COLOR,"30",$1,$2,$3)
+  ECHO_RED      = $(call ECHO_COLOR,"31",$1,$2,$3)
+  ECHO_GREEN    = $(call ECHO_COLOR,"32",$1,$2,$3)
+  ECHO_YELLOW   = $(call ECHO_COLOR,"33",$1,$2,$3)
+  ECHO_BLUE     = $(call ECHO_COLOR,"34",$1,$2,$3)
+  ECHO_MAGENTA  = $(call ECHO_COLOR,"35",$1,$2,$3)
+  ECHO_CYAN     = $(call ECHO_COLOR,"36",$1,$2,$3)
+  ECHO_WHITE    = $(call ECHO_COLOR,"37",$1,$2,$3)
+
+  ECHO_BLACK-   = $(call ECHO_COLOR-,"30",$1,$2,$3)
+  ECHO_RED-     = $(call ECHO_COLOR-,"31",$1,$2,$3)
+  ECHO_GREEN-   = $(call ECHO_COLOR-,"32",$1,$2,$3)
+  ECHO_YELLOW-  = $(call ECHO_COLOR-,"33",$1,$2,$3)
+  ECHO_BLUE-    = $(call ECHO_COLOR-,"34",$1,$2,$3)
+  ECHO_MAGENTA- = $(call ECHO_COLOR-,"35",$1,$2,$3)
+  ECHO_CYAN-    = $(call ECHO_COLOR-,"36",$1,$2,$3)
+  ECHO_WHITE    = $(call ECHO_COLOR-,"37",$1,$2,$3)
+
+  COLOR_BLACK   = tput setaf 0
+  COLOR_RED     = tput setaf 1
+  COLOR_GREEN   = tput setaf 2
+  COLOR_YELLOW  = tput setaf 3
+  COLOR_BLUE    = tput setaf 4
+  COLOR_MAGENTA = tput setaf 5
+  COLOR_CYAN    = tput setaf 6
+  COLOR_WHITE   = tput setaf 7
+  COLOR_DEFAULT = tput sgr0
+
+  colortest:
+          $(call ECHO_BLACK,   "black"  , "", "")
+          $(call ECHO_RED,     "red"    , "", "")
+          $(call ECHO_GREEN,   "green"  , "", "")
+          $(call ECHO_YELLOW,  "yellow" , "", "")
+          $(call ECHO_BLUE,    "blue"   , "", "")
+          $(call ECHO_MAGENTA, "magenta", "", "")
+          $(call ECHO_CYAN,    "cyan"   , "", "")
+          $(call ECHO_WHOTE,   "white"  , "", "")
+#+end_src
+
+Makefunc.mkは ~colortest~ というジョブを含んでいます。
+他のプログラミング言語のように先頭でIncludeしてしまうと ~colortest~ が
+デフォルトジョブ(単にmakeとタイプしたときに実行されるジョブ)になってしまいます。
+
+そのため下記のようにとりあえず ~all~ ジョブを依存関係無しでファイル先頭で定義することで回避します。
+（このテクニックは前述のオライリー本に書いてありました）
+#+begin_src makefile
+  all:
+
+  include Makefunc.mk
+
+  ...
+#+end_src
+** 変数定義
+通常はジョブを作るときに徐々に変数定義が増えていくものなのですが、
+今回は料理番組のように最初に用意しておきます。
+
+Makeの関数を使っているので、適宜「[[https://qiita.com/chibi929/items/b8c5f36434d5d3fbfa4a][Makefileの関数 - Qiita]]」を参照してください。
+
+#+begin_src makefile
+  LOCALDIR    := local
+  LISPDIR     := site-lisp
+  CONFDIR     := conf
+  BUILDDIR    := build
+  SNIPPETDIR  := snippets
+  TEMPLETEDIR := templete
+
+  MIXRAWNAME  := conao-mixed-raw.el
+  MIXFILENAME := conao-mixed.el
+  MIXELCNAME  := $(MIXFILENAME:%.el=%.elc)
+  MIXRAWFILE  := $(LOCALDIR)/$(MIXRAWNAME)
+  MIXFILE     := $(LOCALDIR)/$(MIXFILENAME)
+
+  GITHUB      := https://github.com
+  REMOTE      := $(GITHUB)/conao3
+  REPOS       := leaf.el orglyth.el cort.el feather.el \
+                 org-mode f.el s.el dash.el use-package emacs-htmlize
+  REPODIRS    := $(addprefix $(LISPDIR)/, $(REPOS))
+
+  VERNAME_CMD := --version | head -n 1 | cut -d ' ' -f 3 | grep -oP '^\d+\.\d+'   
+  EMACS_RAW   := $(filter-out emacs-undumped, $(shell compgen -c emacs- | xargs))
+  ALL_EMACS   := $(strip $(sort $(EMACS_RAW)))
+  EMACS_VERS  := $(foreach ver,$(ALL_EMACS),$(shell $(ver) $(VERNAME_CMD)))
+  EMACS_DIC   := $(call MAKEDIC,$(ALL_EMACS),$(EMACS_VERS))
+
+  CONFFILES   := $(sort $(wildcard $(CONFDIR)/*.el))
+
+  LOCALDIRS   := $(addprefix $(LOCALDIR)/,$(EMACS_VERS))
+
+  SED_MIXFILE := 's/;.*//g' -e 's/(provide .*)//g' -e '/^ *$$/d'
+
+  LOCAL_BUILDDIRS   := $(addsuffix /$(BUILDDIR),$(LOCALDIRS))
+  LOCAL_MIXFILES    := $(addsuffix /$(MIXFILENAME),$(LOCALDIRS))
+  LOCAL_LISPDIRS    := $(addsuffix /$(LISPDIR),$(LOCALDIRS))
+  LOCAL_SNIPPETS    := $(addsuffix /$(SNIPPETDIR),$(LOCALDIRS))
+  LOCAL_TEMPLETES   := $(addsuffix /$(TEMPLETEDIR),$(LOCALDIRS))
+  LOCAL_REPOS       := $(foreach repo,$(REPOS),$(addsuffix /$(repo),$(LOCAL_LISPDIRS)))
+
+  LOCAL_MIXELCFILES := $(addsuffix /$(MIXELCNAME),$(LOCAL_BUILDDIRS))
+
+  DIRS          := $(LOCALDIR) $(LISPDIR) $(LOCALDIRS) $(LOCAL_BUILDDIRS) $(LOCAL_LISPDIRS)
+
+  CURRENT_BRANCH = $(shell cd $1; test -d .git && git branch | grep \* | cut -d ' ' -f2)
+  PULL_JOBS     := $(addprefix .make-pull-,$(REPOS))
+
+  EMACS_KEY2VAL  = $(call KEY2VAL,$(EMACS_DIC),$1)
+  EMACS_VAL2KEY  = $(call VAL2KEY,$(EMACS_DIC),$1)
+  LOCAL_EMACS    = $(call EMACS_VAL2KEY,$(call STRCUTREV,$@,'/',$1))
+#+end_src
+** allジョブ
+さて、トップダウンで考えます。とりあえず ~all~ ジョブは下記のことを行うことにします。
+
+この2つの作業が完成したら黄色文字で勝利宣言をします。
+- 必要なディレクトリを作る
+- なんかいっぱい作業する。(~build~ ジョブ)
+#+begin_src makefile
+  all: $(DIRS) build
+          @$(call ECHO_YELLOW,"make job:all completed!!","\n","\n")
+
+  $(DIRS):
+          mkdir -p $@
+#+end_src
+
+** buildジョブ
+「なんかいっぱい作業する」の中身を書きます。各作業の最終工程を書きます。
+
+それぞれは依存してないので ~-j~ オプションをおいたときに他の作業を待つことなく進みます。
+（実際はconao-mixed.elのコンパイルはsite-lispの後にして欲しいので、conao-mixed.elcの依存関係に入れている）
+- ~conf/~ の設定をまとめた ~conao-mixed.el~ のコンパイル
+- レポジトリをダウンロードしたルートの ~site-lisp~ をローカルにコピー、コンパイル
+- ローカルのsnippetsをローカルにシンボリックリンク
+- ローカルのtempletesをローカルにシンボリックリンク
+#+begin_src makefile
+  build: $(LOCAL_MIXELCFILES) $(LOCAL_REPOS) $(LOCAL_SNIPPETS) $(LOCAL_TEMPLETES)
+
+  #################### main jobs
+  ##########
+  $(LOCAL_MIXELCFILES): $(LOCAL_MIXFILES) $(REPODIRS)
+          @$(call ECHO_MAGENTA,"compile $@...","\n","")
+          -cp $(<:%el=%elc) $@
+          -ln -sf $(shell readlink $<) $(@D)/
+          -$(call LOCAL_EMACS,2) -batch -f batch-byte-compile $<
+
+  $(LOCAL_MIXFILES): $(MIXFILE)
+          ln -fs ../$(<F) $@
+
+  ##########
+  define build_repo
+  $(addsuffix /$(LISPDIR)/$1, $(LOCALDIRS)): $(LISPDIR)/$1
+          @$$(call ECHO_MAGENTA,"compile $$@...","\n","")
+          -rm -rf $$@
+          cp -rf $$(LISPDIR)/$$(@F) $$@
+          -EMACS=$$(call LOCAL_EMACS,2) $$(MAKE) -C $$@
+  endef
+  $(foreach repo,$(REPOS),$(eval $(call build_repo,$(repo))))
+
+  ##########
+  $(LOCAL_SNIPPETS): $(SNIPPETDIR)
+          ln -s ../../$(@F) $(LOCALDIR)/$(call STRCUTREV,$@,'/',1)/
+
+  $(LOCAL_TEMPLETES): $(TEMPLETEDIR)
+          ln -s ../../$(@F) $(LOCALDIR)/$(call STRCUTREV,$@,'/',1)/
+#+end_src
+
+*** LOCAL_MIXEXCFILES
+~LOCAL_MIXELCFILES~ は ~conao-mixed.el~ のコンパイルによりできますが、
+この作業はローカルに ~conao-mixed.el~ が存在することと、
+site-lispの各ディレクトリに依存しています。
+
+つまりsite-lispのどれかのファイルが変わったら ~conao-mixed.el~ は再コンパイルされるわけです！
+すごい！
+
+*** LOCAL_REPOS
+~LOCAL_REPOS~ は ~build-repo~ をレポジトリの数だけfor文で回してジョブを作っています。
+
+ジョブの中でforを使うだけじゃなくて、「ジョブを」for文で作れるのすごい！
+
+この書き方は[[https://stackoverflow.com/questions/53450137/target-is-not-bind-to-automatic-variable-in-makefile-job-expanded-by-macro/53451319#53451319][Stack Overflow]]のおじさんに教えてもらいました。ありがとうおじさん。
+
+*** LOCAL_SNIPPETS, LOCAL_TEMPLETES
+これらはシンボリックリンクを張るだけです。
+
+~$@~ の自動変数を使っていますが、これは例えば ~local/22.1/snippets~ の値になり、
+~$(call STRCUTREV,$@,'/',1)~ は ~22.1~ を返すことで ~ln~ のコマンドが完成します。
+
+** 細々としたジョブ
+メインの（抽象度の高い）ジョブが依存している細々としたジョブを定義します。
+
+#+begin_src makefile
+  #################### support jobs
+  ##########
+  $(MIXFILE): $(CONFFILES)
+          cat $^ > $(MIXRAWFILE)
+          cat $(MIXRAWFILE) | sed -e $(SED_MIXFILE) > $(MIXFILE)
+          echo "(provide 'conao-mixed)" >> $(MIXFILE)
+
+  $(REPODIRS):
+          @$(call ECHO_MAGENTA,"git clone $(REMOTE)/$(@F)","\n","")
+          git clone --depth 1 $(REMOTE)/$(@F) $@
+
+  update: $(REPOS:%=.make-update-%) .make-update-.
+  .make-update-%:
+          cd $(LISPDIR)/$*; git pull origin $(call CURRENT_BRANCH,$(LISPDIR)/$*)
+
+  clean:
+          -rm -rf $(DIRS)
+          @$(call ECHO_CYAN,"make job:clean completed!!","\n","\n")
+#+end_src
+
+*** MIXFILE
+~conao-mixed.el~ の作り方を指示しています。
+
+~conf/~ フォルダからソート済みのファイル一覧を取り出し（CONFFILESの定義参照）、
+全部結合した後にsedで加工し、最後に ~require~ できるように ~(provide 'conao-mixed)~ を加えます。
+
+sedの加工は下記を行っています
+- コメント全削除
+- provide文削除（重複するので）
+- その上で、空白だけの行を削除
+
+*** REPODIRS
+githubから取ってきます。この書き方ではconao3が持っているレポジトリじゃないと取ってこれないので、
+要改善ですね。。（時間なかった）
+
+他の方のコードを持ってくる時はforkすれば持ってこれます。
+
+~--shallow-clone~ 早いのでぜひ使ってください！
+
+*** update
+site-lispに落としてきたレポジトリの ~origin pull~ を自動でやります。
+ブランチをチェックアウトしている場合は考慮して、今のブランチを ~pull~ しますが、
+originじゃないとこが最新の場合は考慮しません。
+
+*** clean
+作業ディレクトリをMakeで作っているので、その作業ディレクトリを全削除すればクリーンしたことになります。
+
+巻き込み事故は考慮しません。
+
+* まとめ
+~make~ と叩くだけで10秒くらいで理想のディレクトリ構造を得ることが出来ます。
+また前述の ~-j4~ オプションで3秒まで短縮できます。
+
+わらわらログが出てくるの見るのは結構楽しいものです。
+ぜひあなたもMakefileで.emacs.dの初期設定、管理をされてみてはどうでしょうか。
+
+（.emacs.dより上位の.dotfilesのMakeから、このmakefileを実行することで
+.dotfilesのMakefileの保守性を保ちつつ見通しよく管理できます。すごい！（多段make））
+
+* Makefile全文
+切り貼りすれば復元できると思いますが、一応全文を貼っておきます。
+#+begin_src makefile
+  all:
+
+  include Makefunc.mk
+
+  LOCALDIR    := local
+  LISPDIR     := site-lisp
+  CONFDIR     := conf
+  BUILDDIR    := build
+  SNIPPETDIR  := snippets
+  TEMPLETEDIR := templete
+
+  MIXRAWNAME  := conao-mixed-raw.el
+  MIXFILENAME := conao-mixed.el
+  MIXELCNAME  := $(MIXFILENAME:%.el=%.elc)
+  MIXRAWFILE  := $(LOCALDIR)/$(MIXRAWNAME)
+  MIXFILE     := $(LOCALDIR)/$(MIXFILENAME)
+
+  GITHUB      := https://github.com
+  REMOTE      := $(GITHUB)/conao3
+  REPOS       := leaf.el orglyth.el cort.el feather.el ox-qmd \
+                 f.el s.el dash.el use-package emacs-htmlize
+  REPODIRS    := $(addprefix $(LISPDIR)/, $(REPOS))
+
+  VERNAME_CMD := --version | head -n 1 | cut -d ' ' -f 3 | grep -oP '^\d+\.\d+'   
+  EMACS_RAW   := $(filter-out emacs-undumped, $(shell compgen -c emacs- | xargs))
+  ALL_EMACS   := $(strip $(sort $(EMACS_RAW)))
+  EMACS_VERS  := $(foreach ver,$(ALL_EMACS),$(shell $(ver) $(VERNAME_CMD)))
+  EMACS_DIC   := $(call MAKEDIC,$(ALL_EMACS),$(EMACS_VERS))
+
+  CONFFILES   := $(sort $(wildcard $(CONFDIR)/*.el))
+
+  LOCALDIRS   := $(addprefix $(LOCALDIR)/,$(EMACS_VERS))
+
+  SED_MIXFILE := 's/;.*//g' -e 's/(provide .*)//g' -e '/^ *$$/d'
+
+  LOCAL_BUILDDIRS   := $(addsuffix /$(BUILDDIR),$(LOCALDIRS))
+  LOCAL_MIXFILES    := $(addsuffix /$(MIXFILENAME),$(LOCALDIRS))
+  LOCAL_LISPDIRS    := $(addsuffix /$(LISPDIR),$(LOCALDIRS))
+  LOCAL_SNIPPETS    := $(addsuffix /$(SNIPPETDIR),$(LOCALDIRS))
+  LOCAL_TEMPLETES   := $(addsuffix /$(TEMPLETEDIR),$(LOCALDIRS))
+  LOCAL_REPOS       := $(foreach repo,$(REPOS),$(addsuffix /$(repo),$(LOCAL_LISPDIRS)))
+
+  LOCAL_MIXELCFILES := $(addsuffix /$(MIXELCNAME),$(LOCAL_BUILDDIRS))
+
+  DIRS          := $(LOCALDIR) $(LISPDIR) $(LOCALDIRS) $(LOCAL_BUILDDIRS) $(LOCAL_LISPDIRS)
+
+  CURRENT_BRANCH = $(shell cd $1; test -d .git && git branch | grep \* | cut -d ' ' -f2)
+  PULL_JOBS     := $(addprefix .make-pull-,$(REPOS))
+
+  EMACS_KEY2VAL  = $(call KEY2VAL,$(EMACS_DIC),$1)
+  EMACS_VAL2KEY  = $(call VAL2KEY,$(EMACS_DIC),$1)
+  LOCAL_EMACS    = $(call EMACS_VAL2KEY,$(call STRCUTREV,$@,'/',$1))
+
+
+  ##################################################
+
+  .PHONY: all test build clean
+  all: $(DIRS) build
+          @$(call ECHO_YELLOW,"make job:all completed!!","\n","\n")
+
+  test:
+          echo $(call MAKEDIC,$(ALL_EMACS),$(EMACS_VERS))
+          @echo $(EMACS_DIC)
+          @echo $(call VAL2KEY,$(EMACS_DIC),22.1)
+
+  $(DIRS):
+          mkdir -p $@
+
+  build: $(LOCAL_MIXELCFILES) $(LOCAL_REPOS) $(LOCAL_SNIPPETS) $(LOCAL_TEMPLETES)
+
+  #################### main jobs
+  ##########
+  $(LOCAL_MIXELCFILES): $(LOCAL_MIXFILES) $(REPODIRS)
+          @$(call ECHO_MAGENTA,"compile $@...","\n","")
+          -cp $(<:%el=%elc) $@
+          -ln -sf $(shell readlink $<) $(@D)/
+          -$(call LOCAL_EMACS,2) -batch -f batch-byte-compile $<
+
+  $(LOCAL_MIXFILES): $(MIXFILE)
+          ln -fs ../$(<F) $@
+
+  ##########
+  define build_repo
+  $(addsuffix /$(LISPDIR)/$1, $(LOCALDIRS)): $(LISPDIR)/$1
+          @$$(call ECHO_MAGENTA,"compile $$@...","\n","")
+          -rm -rf $$@
+          cp -rf $$(LISPDIR)/$$(@F) $$@
+          -EMACS=$$(call LOCAL_EMACS,2) $$(MAKE) -C $$@
+  endef
+  $(foreach repo,$(REPOS),$(eval $(call build_repo,$(repo))))
+
+  ##########
+  $(LOCAL_SNIPPETS): $(SNIPPETDIR)
+          ln -s ../../$(@F) $(LOCALDIR)/$(call STRCUTREV,$@,'/',1)/
+
+  $(LOCAL_TEMPLETES): $(TEMPLETEDIR)
+          ln -s ../../$(@F) $(LOCALDIR)/$(call STRCUTREV,$@,'/',1)/
+
+  #################### support jobs
+  ##########
+  $(MIXFILE): $(CONFFILES)
+          cat $^ > $(MIXRAWFILE)
+          cat $(MIXRAWFILE) | sed -e $(SED_MIXFILE) > $(MIXFILE)
+          echo "(provide 'conao-mixed)" >> $(MIXFILE)
+
+  $(REPODIRS):
+          @$(call ECHO_MAGENTA,"git clone $(REMOTE)/$(@F)","\n","")
+          git clone --depth 1 $(REMOTE)/$(@F) $@
+
+  update: $(REPOS:%=.make-update-%) .make-update-.
+  .make-update-%:
+          cd $(LISPDIR)/$*; git pull origin $(call CURRENT_BRANCH,$(LISPDIR)/$*)
+
+  clean:
+          -rm -rf $(DIRS)
+          @$(call ECHO_CYAN,"make job:clean completed!!","\n","\n")
+#+end_src

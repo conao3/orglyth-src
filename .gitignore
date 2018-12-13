@@ -36,3 +36,7 @@ index.html
 /src/**/*.tex
 /src/**/*.pdf
 /archives/
+
+# tmp files
+*~
+\#*
