@@ -1,0 +1,234 @@
+#+title: org-publishを使ってorgでブログを書く話
+#+date: <2018-12-05 Wed 01:56>
+#+tags: emacs, org, org-publish
+
+* はじめに
+この記事は [[https://qiita.com/advent-calendar/2018/emacs][Emacs Advent Calendar 2018 - Qiita]] の14日目の記事です。
+
+前日はtakuchalleさんの「[[https://blog.takuchalle.me/post/2018/12/13/emacs_dart_setup/][Emacs で Dart 開発環境をセットアップ]]」でした。
+
+* モチベーション
+私はOrg-Modeで日常のほとんどすべての文書作成を行っており、
+そもそも「Org-Modeを使うためにEmacs入門した」ほど大きな存在です。
+
+最初にOrg-Modeの公式サイトで紹介されている[[https://www.jstatsoft.org/article/view/v046i03][論文]]から画像を引用します。
+
+[[./img/org-mode-thesis.png]]
+
+この画像の通り、Org-Modeはそれ自身が高性能なマークアップ言語でありながら、
+[[http://misohena.jp/blog/2017-10-26-how-to-use-code-block-of-emacs-org-mode.html][任意の言語のコード実行]]、さらには[[http://lioon.net/org-table-tutorial][表計算]]！などを用いて文書を作成し、
+それを[[https://orgmode.org/manual/Exporting.html][任意のフォーマットへのアウトプット]]が可能で、
+すべての文書のハブともいうべき存在になっています。これを万能文書と呼ぶことにします。
+（21フォーマットのエクスポーターが標準添付（contrib）され、MELPAにはさらに29種ものエクスポーターが登録されています）
+
+例えば現代においてばHTMLをタグ直書きで文書を書いている人はほとんどいないと思います。
+なぜならHTMLタグは人間が書くには冗長すぎる他（閉じタグなど）、
+本質的でないメタ情報が文書中に散らばり（head, id, class）、文書の再利用性が極端に低くなるからです。
+
+よって賢明な方ならばPHPのようなテンプレート言語で生成したり、
+マークダウンから[[https://pandoc.org/][pandoc]]で変換したりすると思います。
+これによりメタ情報部と文書部が分離でき、再利用性が上がり、保守性も向上します。
+
+つまりHTMLとかいう冗長で扱いづらいフォーマットは動的に生成されるべきターゲットであって、
+人間はもっと書きやすい別のフォーマットで文書を作成するべきなのです。
+
+一方、マークダウンには根強いファンがあり、そしてpandocにより万能文書としての
+機能を備えてきたように思えますが、いろいろ[[https://note.solarsolfa.net/n/n697389a6be3b][苦悩している]]ようです。
+
+Orgユーザーからすれば、なぜそんな茨の道を進もうとしているのか理解できません。
+Org文書で作成しさえすれば豊富なターゲットフォーマット、
+つまりWebには静的HTMLやHugo, Wordpress, Qiitaにより公開し、印刷にはLaTeXから生成したPDF、
+スライドにはブラウザで表示する[[https://revealjs.com/#/][Reveal.js]]や[[http://ayapin-film.sakura.ne.jp/LaTeX/Slides/Beamer-tutorial.pdf][LaTeX+Beamer]]で生成したスライド投影用のPDFを使用でき、
+編集時にもOrg-Modeが提供するOrg文書のための様々なコマンドが利用できます。
+
+こんな悲しい自体にはならなくてすむのです。 +（この講義、今期末まであるの辛い。。）+
+https://twitter.com/conao_3/status/1073019805936971776
+
+さて、あるOrg文書を変換するのはとても簡単で、
+例えばこの[[https://raw.githubusercontent.com/conao3/shogi-detect/master/Readme.org][Org文書]]からこの[[https://github.com/conao3/shogi-detect/blob/master/report.pdf][PDFファイル]]をコマンド1発で変換できます。（内容はやっつけなので(ry...）
+
+上の文書には数式や表が含まれていませんが、私は電気系の学生として毎期の実験レポートを
+Org文書から生成したLaTeXから変換したPDFですべてのレポートを提出しましたし、
+卒論を[[http://d.hatena.ne.jp/r_takaishi/20100209/1265680490][書いた人]]や[[http://akisute3.hatenablog.com/entry/2013/12/28/144918][作成入門を書かれている方]]もいます。
+
+一方Org文書が複数に渡る場合、（最終的に1つのファイルにするならinclude文を使えばよいだけなのですが、それぞれを違うファイルとして変換したい場合）
+Org文書同士のリンクやOrg文書へのリンクを張るメタ的なOrg文書を生成したくなったりと途端に難しくなります。
+
+この操作を実現するのがorg-publishです。
+ただ、設定に癖があるのでその設定を紹介するとともに、もっとOrg-Modeのユーザーが増えたらいいなと
+布教をするものです。
+
+* マニュアル
+日本語マニュアルは少々古いですが[[https://takaxp.github.io/org-ja.html#g_t_00e5_0085_00ac_00e9_0096_008b][ここ]]、英語のマニュアルは[[https://orgmode.org/manual/Publishing.html][ここ]]においてあります。
+
+* なにがどうなるのか
+~<root>/src/~ 下に自由にフォルダやOrg文書を作成して配置します。
+そしてPublishコマンドを発行することにより ~<root>/src/~ 下のすべてのOrg文書を
+「その階層を保存した上で」 ~<root>/archives/~ にHTMLで書き出すことが出来ます。
+
+#+BEGIN_EXAMPLE
+  ~/public_html/orglyth/
+     ├── index.inc
+     ├── index.org
+     ├── archives/
+     ├── parts/
+     │   └── index.html
+     └── src/
+         ├── index.inc
+         └── index.org
+         ├── elisp/
+         │   ├── index.inc
+         │   ├── index.org
+         │   ├── boolean.org
+         │   └── with-temp-file.org
+         └── emacs/
+             ├── index.inc
+             ├── index.org
+             ├── install.org
+             └── org-mode
+                 ├── index.inc
+                 ├── index.org
+                 ├── basis-syntax.org
+                 ├── org-list.html
+                 ├── org-list.org
+                 └── ox-publish.org
+#+END_EXAMPLE
+
+設定は任意ですが、ダウンロード用のPDFを用意することもでき、
+ソースのOrg文書を見させたいという要求にも答えられます。
+
+* init.elの設定
+私は今init.elの大改革（[[https://qiita.com/conao3/items/851f6dea9e94ce73f385][.emacs.dの構造から見直したり]]、 [[https://github.com/conao3/leaf.el][use-packageの別実装を作ったり]]（Qiita記事は21日目に予約済み）、
+[[https://qiita.com/conao3/items/098242804eb34da61f49][新しいテストフレームワークを作ったり]]）を行っていて、init.elの編集まで作業が追いついていないのですが
+とりあえずOrg-Modeに関する今の設定は以下です。
+#+BEGIN_SRC emacs-lisp
+  (leaf org
+    :init
+    (leaf org-plus-contrib :ensure t :require nil)
+  
+    :setq
+    ((org-directory                         . "~/Documents/org/")
+     (org-default-notes-file                . "~/Documents/org/notes.org")
+     (org-agenda-files                      . "~/Documents/org/notes.org")
+     (org-return-follows-link               . t)
+     (org-startup-indented                  . t)
+     (org-indent-mode-turns-on-hiding-stars . t)
+     (org-indent-indentation-per-level      . 2)
+     (org-src-window-setup                  . 'other-window)
+     (org-use-sub-superscripts              . '{})
+     (org-image-actual-width                . nil)
+     (org-highlight-latex-and-related       . '(latex script entities)))
+
+    :config  
+    (leaf ob
+      :config
+      (leaf ob-ipython
+        :when (executable-find "jupyter")
+        :ensure t
+        :config
+        ;; depend of jypyter, ipython
+        (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append))
+
+      (leaf ob-plantuml
+        :when (executable-find "plantuml")
+        :ensure t
+        :setq ((org-plantuml-jar-path . plantuml-jar-path))
+        :setq ((org-confirm-babel-evaluate . nil)))
+
+      (org-babel-do-load-languages 'org-babel-load-languages
+                                   '((ipython . t)
+                                     (plantuml . t)
+                                     (org . t)
+                                     (R . t)
+                                     (C . t)
+                                     (emacs-lisp . t))))
+    (leaf ox
+      :config
+      (leaf orglyth
+        :config
+        (leaf orglyth-html
+          :setq
+          ((orglyth-html-enable-option    . t)
+           (orglyth-html-use-ftp          . nil)
+           (orglyth-html-local-root-path  . "~/Documents/sakura/orglyth/")
+           (orglyth-html-remote-root-path . "~/Documents/sakura/remote/")
+           (orglyth-html-ftp-root-path    . "/ftp:conao3@conao3.com:~/www/orglyth/"))
+          :config
+          (orglyth-html-init)
+          (orglyth-html-project-init))
+      
+        (leaf orglyth-latex
+          :setq ((orglyth-latex-enable-option . t))
+          :config
+          (orglyth-latex-init)))))
+#+END_SRC
+
+この設定は拙作の[[https://github.com/conao3/leaf.el][leaf.el]]により以下に変換されます。
+#+BEGIN_SRC emacs-lisp
+  (progn
+    (progn
+      (progn
+        (leaf-backend/:ensure-package 'org-plus-contrib 'org-plus-contrib)
+        (progn)))
+    (progn
+      (require 'org)
+      (setq org-directory "~/Documents/org/")
+      (setq org-default-notes-file "~/Documents/org/notes.org")
+      (setq org-agenda-files "~/Documents/org/notes.org")
+      (setq org-return-follows-link t)
+      (setq org-startup-indented t)
+      (setq org-indent-mode-turns-on-hiding-stars t)
+      (setq org-indent-indentation-per-level 2)
+      (setq org-src-window-setup 'other-window)
+      (setq org-use-sub-superscripts '{})
+      (setq org-image-actual-width nil)
+      (setq org-highlight-latex-and-related
+            '(latex script entities))
+      (progn
+        (require 'ob)
+        (if
+            (executable-find "jupyter")
+            (progn
+              (leaf-backend/:ensure-package 'ob-ipython 'ob-ipython)
+              (progn
+                (require 'ob-ipython)
+                (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append))))
+        (if
+            (executable-find "plantuml")
+            (progn
+              (leaf-backend/:ensure-package 'ob-plantuml 'ob-plantuml)
+              (progn
+                (require 'ob-plantuml)
+                (setq org-plantuml-jar-path plantuml-jar-path)
+                (setq org-confirm-babel-evaluate nil))))
+        (org-babel-do-load-languages 'org-babel-load-languages
+                                     '((ipython . t)
+                                       (plantuml . t)
+                                       (org . t)
+                                       (R . t)
+                                       (C . t)
+                                       (emacs-lisp . t))))
+      (progn
+        (require 'ox)
+        (progn
+          (require 'orglyth)
+          (progn
+            (require 'orglyth-html)
+            (setq orglyth-html-enable-option t)
+            (setq orglyth-html-use-ftp nil)
+            (setq orglyth-html-local-root-path "~/Documents/sakura/orglyth/")
+            (setq orglyth-html-remote-root-path "~/Documents/sakura/remote/")
+            (setq orglyth-html-ftp-root-path "/ftp:conao3@conao3.com:~/www/orglyth/")
+            (orglyth-html-init)
+            (orglyth-html-project-init))
+          (progn
+            (require 'orglyth-latex)
+            (setq orglyth-latex-enable-option t)
+            (orglyth-latex-init))))))
+#+END_SRC
+
+Orgの命名規則として ~ob-*~ はbabel（任意コード実行）などコードブロック関連、
+~ox-*~ はエクスポート関連のパッケージとなっています。
+
+~ox~ ブロックは実験レポートを日常的に書いていたこともあり、いろいろとカオスだったのですが
+[[https://github.com/conao3/orglyth.el][orglyth.el]]というパッケージに括りだすことでinit.elの見通しを良くすることが出来ました。
