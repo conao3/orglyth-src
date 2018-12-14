@@ -18,7 +18,8 @@ h2 {
 }
 
 pre {
-    font-size: 1.3em;
+    font-family: Consolas, 'Courier New', Courier, Monaco, monospace;
+    font-size: 1.0em;
     color: #f6f3e8;
     background: #242424;
     padding: 20px;

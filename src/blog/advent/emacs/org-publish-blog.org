@@ -9,7 +9,7 @@
 
 * モチベーション
 私はOrg-Modeで日常のほとんどすべての文書作成を行っており、
-そもそも「Org-Modeを使うためにEmacs入門した」ほど大きな存在です。
+そもそも私は「Org-Modeを使うためにEmacs入門した」ほど大きな存在です。
 
 最初にOrg-Modeの公式サイトで紹介されている[[https://www.jstatsoft.org/article/view/v046i03][論文]]から画像を引用します。
 
@@ -36,13 +36,18 @@
 機能を備えてきたように思えますが、いろいろ[[https://note.solarsolfa.net/n/n697389a6be3b][苦悩している]]ようです。
 
 Orgユーザーからすれば、なぜそんな茨の道を進もうとしているのか理解できません。
+
 Org文書で作成しさえすれば豊富なターゲットフォーマット、
 つまりWebには静的HTMLやHugo, Wordpress, Qiitaにより公開し、印刷にはLaTeXから生成したPDF、
 スライドにはブラウザで表示する[[https://revealjs.com/#/][Reveal.js]]や[[http://ayapin-film.sakura.ne.jp/LaTeX/Slides/Beamer-tutorial.pdf][LaTeX+Beamer]]で生成したスライド投影用のPDFを使用でき、
 編集時にもOrg-Modeが提供するOrg文書のための様々なコマンドが利用できます。
 
 こんな悲しい自体にはならなくてすむのです。 +（この講義、今期末まであるの辛い。。）+
-https://twitter.com/conao_3/status/1073019805936971776
+
+#+BEGIN_EXPORT html
+<blockquote class="twitter-tweet" data-lang="ja"><p lang="ja" dir="ltr">今受けてる授業大学4年間で最悪の可能性ある。環境の意味で。<br>数学記号変な意味でつかうし、「Wordで」作ったA4の資料を「そのまま」プロジェクターで写すから、いちいち写真撮ってデジタルズームしないと読めない。そして読めるとは限らない。つらすぎる、、 <a href="https://t.co/QDRQIOD6ZL">pic.twitter.com/QDRQIOD6ZL</a></p>&mdash; Conao (@conao_3) <a href="https://twitter.com/conao_3/status/1073019805936971776?ref_src=twsrc%5Etfw">2018年12月13日</a></blockquote>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+#+END_EXPORT
 
 さて、あるOrg文書を変換するのはとても簡単で、
 例えばこの[[https://raw.githubusercontent.com/conao3/shogi-detect/master/Readme.org][Org文書]]からこの[[https://github.com/conao3/shogi-detect/blob/master/report.pdf][PDFファイル]]をコマンド1発で変換できます。（内容はやっつけなので(ry...）
@@ -94,17 +99,12 @@ Org文書同士のリンクやOrg文書へのリンクを張るメタ的なOrg�
                  └── ox-publish.org
 #+END_EXAMPLE
 
-設定は任意ですが、ダウンロード用のPDFを用意することもでき、
-ソースのOrg文書を見させたいという要求にも答えられます。
-
 org-publishを使用する第一の利点として[[https://conao3.com/archives/sitemap.html][sitemapを自動生成]]させることが出来ます。
 
-別途<root>に置いた ~.htaccess~ の設定をすれば、例えば(https://conao3.com/archives/emacs/use-package)にアクセスすると普通にHTMLを閲覧させて
-archivesの部分をsrcに変更した(https://conao3.com/src/emacs/use-package)にアクセスすると
+別途 ~<root>~ に置いた ~.htaccess~ の設定をすれば、例えば
+([[https://conao3.com/archives/blog/advent/emacs/org-publish-blog]])にアクセスすると普通にHTMLを閲覧させて
+archivesの部分をsrcに変更した([[https://conao3.com/src/blog/advent/emacs/org-publish-blog]])にアクセスすると
 ソースのOrg文書を見せることも出来ます。
-
-もちろん文書間リンクや画像リンクなどはいつもどおり書いたものをorg-publishがWebで表示できるようによしなに変更してくれます。
-具体的には ~.org~ へのリンクは ~.html~ へのリンクに変更され、メディアはそのままターゲットディレクトリの対応するパスにコピーします。（orglythでは ~orglyth-html-default-resources-option~ で制御してます）
 
 #+BEGIN_SRC emacs-lisp
   AddDefaultCharset utf-8
@@ -136,10 +136,23 @@ archivesの部分をsrcに変更した(https://conao3.com/src/emacs/use-package)
   RewriteRule ^(/archives/.*)$ $1.html [L]
 #+END_SRC
 
+~archive~ を ~src~ に変えてソースのOrg文書を見せることはすでに出来ているのですが、
+例えば ~archive~ を ~pdf~ に変えたら記事のPDFをダウンロードさせることも簡単にできると思います。
+
+もちろん文書間リンクや画像リンクなどはいつもどおり書いたものをorg-publishがWebで表示できるようによしなに変更してくれます。
+具体的には ~.org~ へのリンクは ~.html~ へのリンクに変更され、メディアはそのままターゲットディレクトリの対応するパスにコピーします。（orglyth.elでは ~orglyth-html-default-resources-option~ で制御してます）
+
 * init.elの設定
 私は今init.elの大改革（[[https://qiita.com/conao3/items/851f6dea9e94ce73f385][.emacs.dの構造から見直したり]]、 [[https://github.com/conao3/leaf.el][use-packageの別実装を作ったり]]（Qiita記事は21日目に予約済み）、
 [[https://qiita.com/conao3/items/098242804eb34da61f49][新しいテストフレームワークを作ったり]]）を行っていて、init.elの編集まで作業が追いついていないのですが
 とりあえずOrg-Modeに関する今の設定は以下です。
+
+新しいパッケージマネージャ(feather.el)の開発が終わり次第、シームレスに設定できるようになりますが、
+現状では伝統的なパッケージ管理のように ~site-lisp~ にレポジトリをクローンして ~load-path~ を通す必要があります。
+
+- [[https://github.com/conao3/leaf.el][leaf.el]] - Emacs-22から利用できる ~use-pacakge~ の別実装
+- [[https://github.com/conao3/feather.el][feather.el]](開発中) - Emacs-22から利用できる全く新しいパッケージマネージャ
+- [[https://github.com/conao3/orglyth.el][orglyth.el]] - ox-*の設定集
 #+BEGIN_SRC emacs-lisp
   (leaf org
     :init
@@ -160,6 +173,7 @@ archivesの部分をsrcに変更した(https://conao3.com/src/emacs/use-package)
 
     :config  
     (leaf ob
+      :setq ((org-confirm-babel-evaluate . nil))
       :config
       (leaf ob-ipython
         :when (executable-find "jupyter")
@@ -225,6 +239,7 @@ archivesの部分をsrcに変更した(https://conao3.com/src/emacs/use-package)
             '(latex script entities))
       (progn
         (require 'ob)
+        (setq org-confirm-babel-evaluate nil)
         (if
             (executable-find "jupyter")
             (progn
@@ -275,13 +290,13 @@ Orgの命名規則として ~ob-*~ はbabel（任意コード実行）などコ�
 orglyth.elの設定部を抜き出すと以下になります。このように少しの変数のみを定義するのみです。
 後はorglyth.elに丸投げします。
 
-- orglyth-html-enable-option : tの時、(orglyth-html-init) をした時に関連する変数を変更します
-- orglyth-html-use-ftp : tの時、プロジェクト:websiteの設定がftp転送したサーバー上になります。 遅いのでnilにしてます
-- orglyth-html-local-root-path : ローカルのOrg文書ルートフォルダです。
-- orglyth-html-remote-root-path : プロジェクト:websiteのターゲットフォルダです。
-- orglyth-html-ftp-root-path : プロジェクト:websiteのターゲットフォルダです。
-- (orglyth-html-init) : 変数の初期化
-- (orglyth-html-project-init) : OrgrythのプロジェクトをOrgに登録する。
+- ~orglyth-html-enable-option~ : tの時、(orglyth-html-init) をした時に関連する変数を変更します。（ソース参照）
+- ~orglyth-html-use-ftp~ : tの時、プロジェクト:websiteの設定がftp転送したサーバー上になります。 遅いのでnilにしてます
+- ~orglyth-html-local-root-path~ : ローカルのOrg文書ルートフォルダです。
+- ~orglyth-html-remote-root-path~ : プロジェクト:websiteのターゲットフォルダです。
+- ~orglyth-html-ftp-root-path~ : プロジェクト:websiteのターゲットフォルダです。
+- ~(orglyth-html-init)~ : 変数の初期化
+- ~(orglyth-html-project-init)~ : orglyth.elのプロジェクトをOrgに登録する。
 #+BEGIN_SRC emacs-lisp
   (leaf orglyth
     :config
@@ -301,3 +316,43 @@ orglyth.elの設定部を抜き出すと以下になります。このように�
       :config
       (orglyth-latex-init)))
 #+END_SRC
+
+~(orglyth-html-projet-init)~ はpublishターゲットを複数持っていると、候補が溢れて管理しづらくなる
+（かもしれない）ので必要な時に登録できるようにしています。
+私はorg-publishを他の用途には使っていないので起動時に登録するようにしています。
+
+* 使い方
+[[./img/org-publish-1.png]]
+
+[[./img/org-publish-2.png]]
+
+前段の設定を行うと ~C-c C-e (org-export-dispatch)~ を押し、ディスパッチャに入り、
+~P x~ を押すと登録されているプロジェクトが確認できます。
+
+様々なプロジェクトが登録されていますが、我々が実行するのは一般的に
+~local~ か ~website~ のメタプロジェクトです。
+
+org-publishの思想から言うと ~local~ で変換結果を確認してその後 ~website~ を実行してftpで転送させたいのでしょうが、
+遅すぎてその間Emacsのメインスレッドがブロックされるので、実際には ~local~ を実行して
+その後ターミナルでサーバーに ~rsync~ しています。
+
+* まとめ
+~org-publish~ により静的HTMLサイトを構築する方法を説明しました。
+
+私はもともと ~org2blog~ を使ってWordpressに投稿していたのですが、
+過去記事が編集しづらかったり、そもそもWordpressが嫌いになってしまったりと使うのを諦めてしまいました。
+
+最近Org-Mode界隈では ~ox-hugo~ を用いてブログを書くのがブームになっている([[https://pxaka.tokyo/blog/categories/hugo/][takaxp]]さんなど)
+ようですが、あまり日の目を見ない ~org-publish~ でも同様のことができることを知ってもらえればと。
+
+Org文書変換前や変換後に任意のElisp関数を登録できたりと、とても自由度高そうなので
+~org-publish~ でブログを書いてみるのも面白いかもしれません。
+
+プログラマたる者、素人の方が作られた[[http://abehiroshi.la.coocan.jp/][阿部寛さんのHP]]より高速なウェブページを構築したいですよね？
+実際それは[[https://qiita.com/Morix1500/items/0eac072a027d478a6b83][けっこう大変らしい]]のですが、org-publishでは静的HTMLを吐くので、表示速度追求も面白いかと思います。
+
+AMP対応してGoogleのサーバーにホスティングしてもらうのも手かもしれません。
+（orglyth.elで将来的に対応予定）
+
+（ちなみに[[https://github.com/rubikitch/daily-emacs-jp][るびきちさん]]に触発されて、私もブログのソースを[[https://github.com/conao3/orglyth-src][GitHubに公開]]してます。
+実際、URLの ~archive~ を ~src~ に変えれば見えるんですが、一覧したいときなどに利用ください。）
