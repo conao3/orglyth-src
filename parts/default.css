@@ -1,0 +1,35 @@
+body {
+    width: 800px;
+    margin-right: auto;
+    margin-left : auto;
+}
+
+h2, h3, h4{
+    color: #6594e0;/*文字色*/
+    border-bottom: dashed 2px #6594e0;
+    
+    padding: 0.25em 0.5em;/*上下 左右の余白*/
+    border-left: solid 5px #6594e0;/*左線*/
+}
+
+h2 {
+    margin-top: 2em;
+    padding-left: 0.8em;
+}
+
+pre {
+    font-size: 1.3em;
+    color: #f6f3e8;
+    background: #242424;
+    padding: 20px;
+}
+
+code {
+    font-size: 1.3em;
+    color: #b21212;
+}
+
+.org-keyword {color: #8ac6f2;}
+.org-builtin {color: #e5786d;}
+.org-string  {color: #95e454;}
+.org-constant{color: #fffc19;}

@@ -97,6 +97,45 @@ Org文書同士のリンクやOrg文書へのリンクを張るメタ的なOrg�
 設定は任意ですが、ダウンロード用のPDFを用意することもでき、
 ソースのOrg文書を見させたいという要求にも答えられます。
 
+org-publishを使用する第一の利点として[[https://conao3.com/archives/sitemap.html][sitemapを自動生成]]させることが出来ます。
+
+別途<root>に置いた ~.htaccess~ の設定をすれば、例えば(https://conao3.com/archives/emacs/use-package)にアクセスすると普通にHTMLを閲覧させて
+archivesの部分をsrcに変更した(https://conao3.com/src/emacs/use-package)にアクセスすると
+ソースのOrg文書を見せることも出来ます。
+
+もちろん文書間リンクや画像リンクなどはいつもどおり書いたものをorg-publishがWebで表示できるようによしなに変更してくれます。
+具体的には ~.org~ へのリンクは ~.html~ へのリンクに変更され、メディアはそのままターゲットディレクトリの対応するパスにコピーします。（orglythでは ~orglyth-html-default-resources-option~ で制御してます）
+
+#+BEGIN_SRC emacs-lisp
+  AddDefaultCharset utf-8
+  AddType "text/plain" org
+
+  ErrorDocument 503 /archives/error/maintenance.html
+  ErrorDocument 404 /archives/error/404.html
+  DirectoryIndex index.html index.org
+
+  SetEnvIf REDIRECT_HTTPS (.*) HTTPS=$1 
+  <IfModule mod_rewrite.c>
+  RewriteEngine on 
+  RewriteCond %{ENV:HTTPS} !on 
+  RewriteRule .* https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L] 
+  </IfModule>
+
+  # temporary-maintenance
+  # RewriteCond %{REQUEST_URI} !=/archives/error/maintenance.html
+  # RewriteRule ^.*$ - [R=503,L]
+
+
+  RewriteEngine on
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME}\.org -f
+  RewriteRule ^(/src/.*)$ $1.org [L]
+
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME}\.html -f
+  RewriteRule ^(/archives/.*)$ $1.html [L]
+#+END_SRC
+
 * init.elの設定
 私は今init.elの大改革（[[https://qiita.com/conao3/items/851f6dea9e94ce73f385][.emacs.dの構造から見直したり]]、 [[https://github.com/conao3/leaf.el][use-packageの別実装を作ったり]]（Qiita記事は21日目に予約済み）、
 [[https://qiita.com/conao3/items/098242804eb34da61f49][新しいテストフレームワークを作ったり]]）を行っていて、init.elの編集まで作業が追いついていないのですが
@@ -232,3 +271,33 @@ Orgの命名規則として ~ob-*~ はbabel（任意コード実行）などコ�
 
 ~ox~ ブロックは実験レポートを日常的に書いていたこともあり、いろいろとカオスだったのですが
 [[https://github.com/conao3/orglyth.el][orglyth.el]]というパッケージに括りだすことでinit.elの見通しを良くすることが出来ました。
+
+orglyth.elの設定部を抜き出すと以下になります。このように少しの変数のみを定義するのみです。
+後はorglyth.elに丸投げします。
+
+- orglyth-html-enable-option : tの時、(orglyth-html-init) をした時に関連する変数を変更します
+- orglyth-html-use-ftp : tの時、プロジェクト:websiteの設定がftp転送したサーバー上になります。 遅いのでnilにしてます
+- orglyth-html-local-root-path : ローカルのOrg文書ルートフォルダです。
+- orglyth-html-remote-root-path : プロジェクト:websiteのターゲットフォルダです。
+- orglyth-html-ftp-root-path : プロジェクト:websiteのターゲットフォルダです。
+- (orglyth-html-init) : 変数の初期化
+- (orglyth-html-project-init) : OrgrythのプロジェクトをOrgに登録する。
+#+BEGIN_SRC emacs-lisp
+  (leaf orglyth
+    :config
+    (leaf orglyth-html
+      :setq
+      ((orglyth-html-enable-option    . t)
+       (orglyth-html-use-ftp          . nil)
+       (orglyth-html-local-root-path  . "~/Documents/sakura/orglyth/")
+       (orglyth-html-remote-root-path . "~/Documents/sakura/remote/")
+       (orglyth-html-ftp-root-path    . "/ftp:conao3@conao3.com:~/www/orglyth/"))
+      :config
+      (orglyth-html-init)
+      (orglyth-html-project-init))
+
+    (leaf orglyth-latex
+      :setq ((orglyth-latex-enable-option . t))
+      :config
+      (orglyth-latex-init)))
+#+END_SRC
