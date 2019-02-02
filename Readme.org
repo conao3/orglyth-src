@@ -4,6 +4,6 @@
 [[https://github.com/conao3/orglyth-src][https://img.shields.io/github/tag/conao3/orglyth-src.svg?style=flat-square]]
 [[https://github.com/conao3/orglyth-src][https://img.shields.io/github/license/conao3/orglyth-src.svg?style=flat-square]]
 [[https://github.com/conao3/github-header][https://files.conao3.com/github-header/gif/orglyth-src.gif]]
-[[https://img.shields.io/uptimerobot/ratio/m781896497-0c9cae3b24e3705fc625ed92.svg?style=flat-square]]
+[[https://uptimerobot.com/dashboard#781896497][https://img.shields.io/uptimerobot/ratio/m781896497-0c9cae3b24e3705fc625ed92.svg?style=flat-square]]
 
 ~orglyth-src~ is my [[https://conao3.com][blog]] raw source.
