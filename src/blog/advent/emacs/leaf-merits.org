@@ -1,0 +1,297 @@
+#+title: use-packageからの移行のすゝめ - leaf.elでバージョン安全なinit.elを書く
+#+date: <2018-12-21 Fri>
+#+tags: emacs, dotfiles, leaf.el, feather.el
+#+options: toc:nil \n:nil
+
+* はじめに
+この記事は [[https://qiita.com/advent-calendar/2018/emacs][Emacs Advent Calendar 2018 - Qiita]] の21日目の記事です。
+
+前日は@hyaktさんの「[[https://qiita.com/hyakt/items/f4468facec0478e06f7a][Dashboardで起動画面を素敵にしよう✨]]」でした。
+
+* モチベーション
+私は[[https://github.com/conao3/dotfiles/commit/fd06cea5dd040ec1fb34225a3f3202200e00801e][8月]]から.emacs.d/init.elの大改革を行っており、その副産物としての成果物をEmacs Advent Calendarで共有させていただいていました。
+
+まず「[[https://qiita.com/conao3/items/851f6dea9e94ce73f385][.emacs.dの理想的なディレクトリ構造]]」について考え、一番カオスになっていた「[[https://qiita.com/conao3/items/f81cf964198d4da93a05][Org-Modeのエクスポート関連の設定]]([[https://github.com/conao3/orglyth.el][orglyth.el]])」を見直し、
+「[[https://github.com/jwiegley/use-package][use-package]]の細かなストレスを解消するために作り直し([[https://github.com/conao3/leaf.el][leaf.el]])」（この記事）、
+そのサポートのために「並列パッケージダウンロードを実現するパッケージ([[https://github.com/conao3/feather.el][feather.el]])」と「新しいElispテストフレームワーク([[https://github.com/conao3/cort.el][cort.el]])」を開発しています。
+
+これらのパッケージとディレクトリ構造により、私のinit.elはEmacs-22からEmacs-26までのEmacsでエラーなく動作 +し+ 
+（する予定です（泣）feather.elの開発が間に合わなかったので、package.elに依存しているため、現状Emacs-24以上でしか動作しません。）、
+それらの環境は完全に分離されています。
+
+そのためEmacs-26を常用し、いつもは各パッケージをHEADで利用している（melpaのデフォルト）が、
+よくわからないエラーが起こってそのハンドリングが煩わしい時、とりあえずEmacs-24に逃げて一段落するまで作業を続ける。みたいなことが出来ます。
+
+また実行バイナリがそもそも異なり、それぞれで環境（Emacsから見える ~user-emacs-directory~ ）が完全に分離されているので、
+init.elの編集をEmacs-25で行い、その動作確認をEmacs-26を起動したり落としたりしてする。といったことが簡単にできます。
+
+また現状考えられる最古のバージョンである、Emacs-22という化石にも対応しているため、Emacs-22でもほどほどに使うことが出来ます。
+
+[[http://dotfiles.conao3.com/]] というURLでインストール用のシェルスクリプトをホスティングしているので、
+押し付けられたパソコンで実行するべきは ~curl dotfiles.conao3.com | sh~ というワンライナーでいつもの環境が整うことになります。
+（上記URLはshのMIMEタイプをhtmlにしているのでブラウザで表示できます。これもTipsとしては面白い話題かと思います。）
+
+私のinit.elの大改革は今年中に終わらないと思います。。
+そして副産物の各パッケージもまだまだ発展途上ですが、開発を続けるので暇な時に覗いていただければと思います。
+
+* 定義
+この記事タイトルは煽りですが、本記事でバージョン安全とは「ターゲットとするそれぞれのEmacsで同一のinit.elをエラーなく実行できる」とします。
+そのため「ブランチなりディレクトリを分けて、Emacs-24用、Emacs-26用の異なるinit.elを用意する」方法はこの記事の範囲外です。
+
+実際、この運用はしたことがあって、異なるブランチを見ているdotfilesフォルダを2つ用意して ~-l~ オプションで起動時に分ける運用をした事があるのですが、
+Emacs標準添付のパッケージへの設定などを2つのブランチで管理することが破綻してしまい、諦めてしまいました。
+
+** use-packageについて
+[[https://github.com/jwiegley/use-package][use-package]]は素晴らしいパッケージであって、多彩なキーワードをサポートし、初心者の方が避けがちなautoloadを上手く隠蔽してくれます。
+~require~ ベースから ~use-package~ ベースにinit.elを代えるだけでEmacsの起動が早くなることもザラです。
+
+また私にとっては、use-packageによって今までコメントで区切っていた各パッケージごとの設定が、見やすく分離されることも良い副産物でした。
+
+#+BEGIN_SRC emacs-lisp
+  ;;;;;;;;;;;;;;;; smartparens ;;;;;;;;;;;;;;;;
+
+  (require 'smartparens)
+  (require 'smartparens-config)
+  (sp-pair "$" "$")
+  (sp-use-smartparens-bindings)
+  (smartparens-global-strict-mode t)
+  (show-smartparens-global-mode t)
+  (smartparens-global-mode t)
+
+  ;;;;;;;;;;;;;;;; auto-complete ;;;;;;;;;;;;;;;;
+
+  (require 'auto-complete)
+  (setq ac-auto-show-menu   0
+        ac-delay            0
+        ac-quick-help-delay 1
+        ac-menu-height      15
+        ac-auto-start       1
+        ac-use-menu-map     t)
+#+END_SRC
+
+use-package導入前は上記のように設定しており、ブロックを分かりやすくするために ~require~ を明示的に実行していました。
+しかしuse-package導入後は以下のようになります。
+
+#+BEGIN_SRC emacs-lisp
+  (use-package smartparens :ensure t :diminish ""
+    :init (use-package markdown-mode :ensure t)
+    :config
+    (use-package smartparens-config)
+    (sp-pair "$" "$")
+
+    (sp-use-smartparens-bindings)
+    (smartparens-global-strict-mode t)
+    (show-smartparens-global-mode t)
+    (smartparens-global-mode t))
+
+  (use-package auto-complete :ensure t :demand t :diminish ""
+    :bind (:map ac-menu-map
+                ("C-n" . ac-next)
+                ("C-p" . ac-previous))
+    :init
+    (use-package fuzzy   :ensure t)
+    (use-package pos-tip :ensure t)
+  
+    :config
+    (use-package auto-complete-config)
+    (ac-config-default)
+    (setq ac-auto-show-menu   0
+          ac-delay            0
+          ac-quick-help-delay 1
+          ac-menu-height      15
+          ac-auto-start       1
+          ac-use-menu-map     t)
+#+END_SRC
+
+このようにコメントや ~require~ 文によって明示的にブロックを区切らなくても、関連する設定群をわかりやすく見ることが出来ます。
+
+S式を折りたたむ、[[http://syohex.hatenablog.com/entry/20110706/1309965284][hs-minor-mode]]との親和性も最高でした。
+全S式を折りたたむ ~hs-hide-all~ を実行すれば、設定しているパッケージを一覧することが出来ます。
+
+\\写真1\\
+
+気になるパッケージを見つけたらその部分だけ表示することも可能です
+
+\\写真2\\
+
+そしてuse-packageの中が長くなる場合は、折りたたむ階層を代えることで以下の表示にもでき、
+編集するべき箇所をすばやく見つけることができます。
+
+\\写真3\\
+
+そしてuse-packageをuse-packageの中に書けることを知り、ブロックの定義のように使うようになりました。
+use-packageには ~:no-require~ キーワードがあり、指定されたパッケージを ~require~ しないことにできるので、自由な見出しとして利用できるのです。
+
+\\写真4\\
+
+こうすることで、 ~hs-hide-all~ したときに見出しを目で探して、そこだけ展開して編集する。というふうに運用していました。
+
+** use-packageの（に付随する）問題点
+このように私のinit.elはuse-packageに深く依存していて、実際その文法は大好きでした。
+しかし不満点は出てくるもので、それは以下のようなものです。
+
+*** :if や :disabled キーワードの直感に反した動作
+~ob-ipython~ や ~migemo~ のように外部コマンドに依存するパッケージは、
+use-packageに ~:if~ キーワードが用意してあるので 次のように書けます。
+
+#+BEGIN_SRC emacs-lisp
+  (use-package migemo
+    :if (executable-find "cmigemo")
+    :ensure t
+    :config
+    ;; depend on latest cmigemo
+    ;; $ brew install cmigemo --HEAD
+    (setq migemo-command "cmigemo")
+    (setq migemo-options '("-q" "--emacs"))
+    (setq migemo-dictionary "/usr/local/share/migemo/utf-8/migemo-dict")
+  
+    (setq migemo-user-dictionary nil)
+    (setq migemo-regex-dictionary nil)
+    (setq migemo-coding-system 'utf-8-unix)
+    (migemo-init))
+
+  (use-package ob-ipython :ensure t
+    :if (executable-find "jupyter")
+    :config
+    (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append))
+#+END_SRC
+
+use-packageの ~:if~ キーワードはS式を受け取り、評価結果がnilの場合、他のキーワードをすべて無視し、そのuse-package節全体を ~nil~ に変換するキーワードです。
+そのため ~ob-ipyhon~ の例で言えば、 ~jupyter~ が見つからない時、そのすべての設定は ~nil~ の虚空に吸い込まれると思うし、[[https://github.com/jwiegley/use-package#prevent-loading-if-dependencies-are-missing][マニュアルにもそう書いてあります]]。
+
+またinit.elの設定を軽く行って、動かしてみたところ動作が不安定な時、use-packageユーザーは ~:disabled~ キーワードを使用すると思います。
+このように。
+
+#+BEGIN_SRC emacs-lisp
+  (use-package elscreen-persist :ensure t :disabled t
+      :config
+      (elscreen-persist-mode 1)
+
+      ;; desktop.el settings
+      (setq desktop-files-not-to-save "")
+      (setq desktop-restore-frames nil)
+      (desktop-save-mode t))
+#+END_SRC
+
+(~:disabled~ キーワードはそれが指定された瞬間にuse-package節を ~nil~ に変換します。
+つまり ~:disabled~ も ~:disabled nil~ も ~:disabled t~ もすべて ~nil~ になります。しかし私は統一性を重視して明示的に指定していました。)
+
+しかしコマンドが見つからない状況であっても ~migemo~ や ~jupyter~ はなぜか読み込まれ、起動時にエラーになる他、
+~elscreen-persist~ は当時バグっておりぐちゃぐちゃなウィンドウ構成を復元してきました。
+
+scratchバッファで ~macroexpand~ してもきちんと ~nil~ になっており、当時Elisp初心者だった私は解決できない問題として
+elpaディレクトリを全削除して対処していました。
+
+全削除してもう一度世界をやり直すと、エラーなく起動することも理解不能でした。
+
+*** 新しいキーワードを追加するのが困難
+~use-package~ はそれ自体、拡張されることをよく考えられていて、キーワードを追加することは簡単である。
+というのはよく語られていたと思いますが、実際そのAPIを外部から利用したものは当時[[https://github.com/quelpa/quelpa-use-package][Quelpa]]しかありませんでした。
+現在は[[https://github.com/raxod502/straight.el][straight.el]]もuse-package用のフロントエンドを提供していますね。
+
+私はuse-packageに参考URLを書ける、 ~:url~ を追加したかったのですが、
+elispに親しんでなかったこともあって、1週間悩んで諦めてしまいました。
+（コメントは暗い文字になるので、文字列として書けたら読みやすくなるかなというアイデア）
+
+結局 ~(add-to-list 'use-package-keywords~ でGitHub全体を検索して、同じことをしている人の[[https://github.com/0x7c48/emacs.d/blob/c3f020d2e38f0f13a95a426e819cdd0216b589c1/emacs-lisp/system/_use-package.el][コード]]を見つけることができました。
+
+*** あるパッケージだけ違うディストリビューションからダウンロード出来ない
+これはuse-packageというよりpackage.elの問題です。
+パッケージはすべて ~:ensure t~ でmelpaからダウンロードしていたのですが、
+例えば「[[https://qiita.com/zk_phi/items/e70bc4c69b5a4755edd6][{Emacs} key-chord.el を改良してキーバインドし放題になった話]]」という記事を読んで、
+zkさんのフォーク版の ~key-chord~ を使いたい！と思ったとします。
+
+package.elはGitHubからのダウンロードができない？ので ~:init~ 節に ~el-get~ を用いてダウンロードします。
+
+#+BEGIN_SRC emacs-lisp
+  (use-package key-chord
+    :init  (el-get-bundle zk-phi/key-chord)
+    :config
+    (setq key-chord-two-keys-delay 0.15
+          key-chord-safety-interval-backward 0.1
+          key-chord-safety-interval-forward  0.25)
+    (key-chord-mode 1))
+#+END_SRC
+
+こんな柔軟に書けるuse-package素晴らしい！と思っても、次のパッケージの設定によって儚く壊れてしまいます。
+
+#+BEGIN_SRC emacs-lisp
+  (use-package use-package-chords :ensure t)
+#+END_SRC
+
+これは全く問題がないと思われますが、 ~use-package-chords~ は ~key-chord~ に依存しており、
+package.elからはインストールしていないと判断されるので、package.elによってアップストリームの ~key-chord~ がダウンロードされます。
+
+zkさんの ~key-chord~ を読み込んでいる場合、melpaの ~key-chord~ は多重ロードされませんが、
+次回起動時 ~(package-initialize)~ によってmelpaの ~key-chord~ が読み込まれてしまいます。。
+
+これを防ぐには、あるパッケージを別のフォーク版に代えた場合、
+それに依存している全パッケージを自分でel-getにより管理しなければなりません。つらい。。
+
+何がどんなパッケージに依存しているか意識せずインストールできるpackage.elの利点が失われてしまいました。。
+
+*** use-packageに依存したinit.elをEmacs-22で読み込む（と骨抜きになる）
+前段のように私のinit.elはuse-packageに深く依存していて、それは一般的には問題ないのですが、
+私のようにEmacs-22という化石でも動かしたいとなると難しくなってきます。
+
+一般的な解決方法は ~use-package~ の読み込みに失敗したら、use-package節をすべて ~nil~ に変換することにすることです。（[[https://qiita.com/kai2nenobu/items/5dfae3767514584f5220#use-package-%25E3%2581%258C%25E5%25AD%2598%25E5%259C%25A8%25E3%2581%2597%25E3%2581%25AA%25E3%2581%2584%25E5%25A0%25B4%25E5%2590%2588][出典]]）
+
+#+BEGIN_SRC emacs-lisp
+  (when (and (version< emacs-version "24.0")
+             (require 'use-package nil t))
+    (defmacro use-package (&rest args)))
+#+END_SRC
+
+これは起動しているEmacsが24より下の場合、use-packageというマクロを上書き定義し、use-package節をすべて ~nil~ に変換してしまうことにします。
+Emacs-23は ~package.el~ も満足に動かないし、外部パッケージの設定をすべて ~nil~ に変換してしまっても一般的には問題ないと思います。
+
+しかし私はEmacs標準添付パッケージもすべて ~use-package~ で設定を行っており、 ~use-package~ をすべて ~nil~ に変換してしまっては
+~-q~ オプションで起動したときとほぼ変わらないEmacsが起動してしまいます。。。
+
+\\写真5\\
+
+なんのために同じinit.elを読み込んでいるのかわかりません。
+
+この時代にその解決方法として、ブランチを切って標準添付パッケージについては ~use-package~ を使わないinit.elを用意する運用を行っていました。
+この運用は前段に書いたとおり、同じコードがブランチに散らばり、すぐに管理不能になりました。。
+
+* use-packageに代わるパッケージ, leaf.el
+これらの問題点を解決するべく私が開発しているのが[[https://github.com/conao3/leaf.el][leaf.el]]です。
+use-packageに心酔している私が開発しているので、基本的にはuse-packageと同様の記述を提供します。
+
+開発が追いついていないこともあり、現在実現していないことも多々ありますが、将来的に実現する予定です。
+
+** Emacs-22からの動作を保証
+use-packageから離れる原因となった大きな理由を解消します。
+実際、lispなのでEmacs-22で動くようなコードを書くことはあまり障害になりません。
+
+** feather.elとの連携（開発中）
+前段でpackage.elの不満点が出てきました。
+そういえばpackage.elはダウンロードするバージョンの固定ができないし、なぜか1つづつダウンロードするし、
+なぜかコンパイルする間、次のパッケージをダウンロードしません。
+
+ということで新しいパッケージマネージャの開発に着手しました。
+tadsanさんに教えていただいたのですが、PHPでもこういう思想で作られた[[http://blog.tojiru.net/article/432944706.html][ソフトがある]]ようです。
+
+feather.elは依存関係をきちんと考慮した上で、並列にパッケージをダウンロード・コンパイルします。
+そして[[https://qiita.com/takaxp/items/c01fb7737496af9a8fcd#%25E3%2583%25AD%25E3%2583%25BC%25E3%2583%2589%25E3%2583%2591%25E3%2582%25B9%25E3%2582%2592%25E3%2582%2580%25E3%2582%2584%25E3%2581%25BF%25E3%2581%25AB%25E5%25A2%2597%25E3%2582%2584%25E3%2581%2595%25E3%2581%25AA%25E3%2581%2584][load-pathが必要以上に長くなると起動時間が遅くなる]]というtakaxpさんの知見を活かし、
+コンパイルされたファイルは全て一つのディレクトリに保存されます。
+
+もちろん投げっぱなしではなく、パッケージの削除を指示すると複数ファイルの管理をきちんと行ってくれます。
+
+leaf.elはfeather.elをデフォルトで ~:ensure~ キーワードのバックエンドとして使用し、
+ユーザーとしては ~use-package~ を ~leaf~ に置換するだけでfeather.elの
+パワフルなパッケージマネージメントを利用できるようになる予定です。
+
+** ユーザーによる自由なキーワード追加
+use-packageはキーワードの引数をnormarizeとhandlerの2つの関数で管理していますが、それが処理が見づらい原因になっていると思います。
+
+leaf.elはhandlerの一つだけの関数で処理を行っており、とても素直な実装になっています。
+
+さらにhandlerは必ずリストを返し、受け取り側では必ず ~,@~ でリストを開いて結合するルールになっており、統一性のあるコードになっていると思います。
+マクロ展開なので、バッククオートとカンマが多く、マクロに慣れていないと読みづらい可能性があります。。
+
+まだ途中ですが分かりやすいドキュメントを書く予定です。
+
+* まとめ
+時間に追われて尻すぼみになってしまいました。興味を持っていただけたらぜひ[[https://github.com/conao3/leaf.el][leaf.el]]や[[https://github.com/conao3/feather.el][feather.el]]をウォッチしていただければと思います。
