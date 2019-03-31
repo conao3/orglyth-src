@@ -64,7 +64,7 @@ Those code and articles are released under license GPL3.
 #+begin_example
   GNU General Public License Version 3 (GPL3)
   Copyright (c) Naoya Yamashita - https://conao3.com
-  https://github.com/conao3/orglyth-src/blob/master/LICENSE
+  https://github.com/conao3/orglyth-src/blob/master/LICENSE-GPL3
 #+end_example
 ** Author
 - Naoya Yamashita ([[https://github.com/conao3][conao3]])
