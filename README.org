@@ -1,7 +1,5 @@
 #+author: conao3
-#+date: <2019-02-03 Sun>
-#+author: conao3
-#+date: <2018-10-25 Thu>
+#+date: <2018-02-03 Sun>
 
 [[https://github.com/conao3/orglyth-src][https://raw.githubusercontent.com/conao3/files/master/header/png/orglyth-src.png]]
 [[https://github.com/conao3/orglyth-src/blob/master/LICENSE][https://img.shields.io/github/license/conao3/orglyth-src.svg?style=flat-square]]
