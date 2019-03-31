@@ -1,6 +1,11 @@
+#+title: さくらのVPS初期設定
+#+subtitle: Emacsインストールからnginxの設定をしてHTTPSで公開するまで
+#+date: <2019-03-31 Sun 15:52>
 #+author: conao3
-#+date: <2019-03-31 Sun>
-#+title: さくらのVPS初期設定 Emacsインストールからnginxの設定をしてHTTPSで公開するまで
+#+orglyth-tags: server emacs nginx
+
+# history
+# <2019-03-31 Sun 15:52> first draft
 
 * tl;dl
 さくらのVPSを契約したものの、放置していたので初期設定を行ったログです。
