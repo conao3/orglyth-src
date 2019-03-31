@@ -58,6 +58,14 @@ Feel free to send PR!
   https://github.com/conao3/orglyth-src/blob/master/LICENSE
 #+end_example
 
+This repository include code under license GPL3 like Emacs code.
+Those code and articles are released under license GPL3.
+(specified in the articles)
+#+begin_example
+  GNU General Public License Version 3 (GPL3)
+  Copyright (c) Naoya Yamashita - https://conao3.com
+  https://github.com/conao3/orglyth-src/blob/master/LICENSE
+#+end_example
 ** Author
 - Naoya Yamashita ([[https://github.com/conao3][conao3]])
 
