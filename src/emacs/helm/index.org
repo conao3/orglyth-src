@@ -1,0 +1,124 @@
+#+title: helm.el
+#+subtitle: Anytingから生まれた、先進気鋭な候補選択パッケージ
+#+author: conao3
+#+date: <2019-04-05 金 19:08>
+
+# history
+#
+# <2018-08-04 Sat 04:45> first-draft
+
+* tl;dr
+[[https://github.com/emacs-helm/helm/tree/master][helm.el]]はAnytingのフォーク版で、新しい機能をどんどん追加していく開発方針となっています。
+そのため以前使えていた機能が気づいたら動かなくなっていたりすることがままありますが、
+helmと連携する数多くのパッケージは魅力です。
+
+MELPAで「helm」で検索した場合、181パッケージがヒットしますが、
+一方「ivy/(counsel)」では42/(17)パッケージ、ヒットするのでその差は歴然です。
+
+なおAnything本体はMELPAからダウンロードできない他、関連パッケージもMELPAには投稿されていないようです。
+
+* インストール
+#+begin_src emacs-lisp
+  ;; require leaf
+  (require 'leaf)
+
+  ;; pakcage initialize
+  (leaf package
+    :custom ((package-archives . '(("org"   . "https://orgmode.org/elpa/")
+                                   ("melpa" . "https://melpa.org/packages/")
+                                   ("gnu"   . "https://elpa.gnu.org/packages/"))))
+    :config
+    (package-initialize))
+
+  ;; install helm
+  (leaf helm
+    :ensure t
+    :require t
+    :bind (("M-x"     . helm-M-x)
+           ("M-X"     . execute-extended-command)
+           ("C-x b"   . helm-mini)
+           ("C-x C-f" . helm-find-files)
+           ("C-x C-r" . helm-recentf)
+           ("C-x b"   . helm-buffers-list)
+           ("C-x C-b" . helm-buffers-list)
+           ("C-s"     . helm-occur)
+           ("C-x g"   . helm-google-suggest)
+           ("C-R"     . helm-regexp)
+           ("M-y"     . helm-show-kill-ring)
+           ("C-c h"   . helm-command-prefix)
+           :map helm-map
+           ("<tab>"   . helm-execute-persistent-action)
+           ("C-i"     . helm-execute-persistent-action)
+           ("C-z"     . helm-select-action))
+    :custom (;; open helm buffer with separate window, not to occupy whole flame.
+             (helm-split-window-inside-p . t)
+
+             ;; must 40 line for helm window
+             (helm-autoresize-max-height . 0)
+             (helm-autoresize-min-height . 40))
+    :config
+    (leaf helm-config
+      :require t
+      :custom ((helm-command-prefix-key . "C-c C-h")))
+
+    ;; Change helm-command-prefix "C-x c" to "c-c h"
+    ;; default "C-x c" is quite close to "C-x C-c" which quits Emacs
+    (global-unset-key (kbd "C-x c"))
+
+    (helm-autoresize-mode 1)
+    (helm-mode 1))
+#+end_src
+
+キーバインドは好みで追加したり削除したりしてもらえればと。
+
+~helm-config~ を ~require~ することでキーバインドとfont-lockが設定されます。
+
+* 使い方
+** ショートカット
+#+begin_src emacs-lisp
+  (defvar helm-command-map
+    (let ((map (make-sparse-keymap)))
+      (define-key map (kbd "a")         'helm-apropos)
+      (define-key map (kbd "e")         'helm-etags-select)
+      (define-key map (kbd "l")         'helm-locate)
+      (define-key map (kbd "s")         'helm-surfraw)
+      (define-key map (kbd "r")         'helm-regexp)
+      (define-key map (kbd "m")         'helm-man-woman)
+      (define-key map (kbd "t")         'helm-top)
+      (define-key map (kbd "/")         'helm-find)
+      (define-key map (kbd "i")         'helm-semantic-or-imenu)
+      (define-key map (kbd "I")         'helm-imenu-in-all-buffers)
+      (define-key map (kbd "<tab>")     'helm-lisp-completion-at-point)
+      (define-key map (kbd "p")         'helm-list-emacs-process)
+      (define-key map (kbd "C-x r b")   'helm-filtered-bookmarks)
+      (define-key map (kbd "M-y")       'helm-show-kill-ring)
+      (define-key map (kbd "C-c <SPC>") 'helm-all-mark-rings)
+      (define-key map (kbd "C-x C-f")   'helm-find-files)
+      (define-key map (kbd "f")         'helm-multi-files)
+      (define-key map (kbd "C-:")       'helm-eval-expression-with-eldoc)
+      (define-key map (kbd "C-,")       'helm-calcul-expression)
+      (define-key map (kbd "M-x")       'helm-M-x)
+      (define-key map (kbd "M-s o")     'helm-occur)
+      (define-key map (kbd "M-g a")     'helm-do-grep-ag)
+      (define-key map (kbd "c")         'helm-colors)
+      (define-key map (kbd "F")         'helm-select-xfont)
+      (define-key map (kbd "8")         'helm-ucs)
+      (define-key map (kbd "C-c f")     'helm-recentf)
+      (define-key map (kbd "C-c g")     'helm-google-suggest)
+      (define-key map (kbd "h i")       'helm-info-at-point)
+      (define-key map (kbd "h r")       'helm-info-emacs)
+      (define-key map (kbd "h g")       'helm-info-gnus)
+      (define-key map (kbd "h h")       'helm-documentation)
+      (define-key map (kbd "C-x C-b")   'helm-buffers-list)
+      (define-key map (kbd "C-x r i")   'helm-register)
+      (define-key map (kbd "C-c C-x")   'helm-run-external-command)
+      (define-key map (kbd "b")         'helm-resume)
+      (define-key map (kbd "M-g i")     'helm-gid)
+      (define-key map (kbd "@")         'helm-list-elisp-packages)
+      map))
+#+end_src
+
+~helm-config~ を ~require~ すると、 ~helm-command-prefix-key~ に設定されたキーマップに
+上記のキーバインドが設定されます。
+
+この中で使用頻度の高いコマンドを、押しやすいキーバインドに設定する形になります。
