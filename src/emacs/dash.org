@@ -1,0 +1,296 @@
+#+title: dash.el
+#+subtitle: Eispのためのモダンなリスト操作ライブラリ
+#+author: conao3
+#+date: <2019-04-05 金 19:08>
+
+# history
+#
+# <2018-08-04 Sat 04:45> first-draft
+
+* tl;dr
+[[https://github.com/magnars/dash.el/tree/master][dash.el]]は[[https://github.com/magnars][magnars]]氏が作成されたパッケージで、Elispに豊富なリスト操作関数を追加します。
+Elispパッケージの開発で使用するかは議論の余地があります[fn:1]が、init.elで使用できる所があれば積極的に使っても良いですね！
+
+* インストール
+#+begin_src emacs-lisp
+  ;; require leaf
+  (require 'leaf)
+
+  ;; pakcage initialize
+  (leaf package
+    :custom ((package-archives . '(("org"   . "https://orgmode.org/elpa/")
+                                   ("melpa" . "https://melpa.org/packages/")
+                                   ("gnu"   . "https://elpa.gnu.org/packages/"))))
+    :config
+    (package-initialize))
+
+  ;; install dash
+  (leaf dash :ensure t)
+#+end_src
+
+* 使い方
+** 概要
+すべての関数はダッシュ ~-~ が前置されています。
+
+アナフォリック版のマクロは2つのダッシュ ~--~ が前置されています。
+
+#+begin_src emacs-lisp :exports both :results pp
+  (-map (lambda (n) (* n n)) '(1 2 3 4))
+#+end_src
+
+#+RESULTS:
+: (1 4 9 16)
+
+#+begin_src emacs-lisp :exports both :results pp
+  (--map (* it it) '(1 2 3 4))
+#+end_src
+
+#+RESULTS:
+: (1 4 9 16)
+
+実践的な使い方は公式の[[https://github.com/magnars/dash.el/tree/master][README]]を参照して貰えればと。
+
+** 関数集
+*** Maps
+リストの各要素または選択された要素に対して、受け取った関数を適用し返却する関数
+
+- -map (fn list)
+- -map-when (pred rep list)
+- -map-first (pred rep list)
+- -map-last (pred rep list)
+- -map-indexed (fn list)
+- -annotate (fn list)
+- -splice (pred fun list)
+- -splice-list (pred new-list list)
+- -mapcat (fn list)
+- -copy (arg)
+
+*** Sublist selection
+リストから要素を選択する関数
+
+− -filter (pred list)
+− -remove (pred list)
+− -remove-first (pred list)
+− -remove-last (pred list)
+− -remove-item (item list)
+− -non-nil (list)
+− -slice (list from &optional to step)
+− -take (n list)
+− -take-last (n list)
+− -drop (n list)
+− -drop-last (n list)
+− -take-while (pred list)
+− -drop-while (pred list)
+− -select-by-indices (indices list)
+− -select-columns (columns table)
+− -select-column (column table)
+
+*** List to list
+リストに対して操作をした後、そのコピーを返却する関数
+
+- -keep (fn list)
+- -concat (&rest lists)
+- -flatten (l)
+- -flatten-n (num list)
+- -replace (old new list)
+- -replace-first (old new list)
+- -replace-last (old new list)
+- -insert-at (n x list)
+- -replace-at (n x list)
+- -update-at (n func list)
+- -remove-at (n list)
+- -remove-at-indices (indices list)
+
+*** Reductions
+リストを単一の値にする関数
+Functions reducing lists into single value.
+
+- -reduce-from (fn initial-value list)
+- -reduce-r-from (fn initial-value list)
+- -reduce (fn list)
+- -reduce-r (fn list)
+- -reductions-from (fn init list)
+- -reductions-r-from (fn init list)
+- -reductions (fn list)
+- -reductions-r (fn list)
+- -count (pred list)
+- -sum (list)
+- -running-sum (list)
+- -product (list)
+- -running-product (list)
+- -inits (list)
+- -tails (list)
+- -common-prefix (&rest lists)
+- -min (list)
+- -min-by (comparator list)
+- -max (list)
+- -max-by (comparator list)
+
+*** Unfolding
+Reductionsとは異なり、1つの値を生成するためにリストを消費するのではなく、
+シード値からリストを構築する関数
+
+- -iterate (fun init n)
+- -unfold (fun seed)
+
+*** Predicates
+条件分岐のための検査関数
+
+- -any? (pred list)
+- -all? (pred list)
+- -none? (pred list)
+- -only-some? (pred list)
+- -contains? (list element)
+- -same-items? (list list2)
+- -is-prefix? (prefix list)
+- -is-suffix? (suffix list)
+- -is-infix? (infix list)
+
+*** Partitioning
+入力リストをリストのリストに分割する関数
+
+- -split-at (n list)
+- -split-with (pred list)
+- -split-on (item list)
+- -split-when (fn list)
+- -separate (pred list)
+- -partition (n list)
+- -partition-all (n list)
+- -partition-in-steps (n step list)
+- -partition-all-in-steps (n step list)
+- -partition-by (fn list)
+- -partition-by-header (fn list)
+- -partition-after-pred (pred list)
+- -partition-before-pred (pred list)
+- -partition-before-item (item list)
+- -partition-after-item (item list)
+- -group-by (fn list)
+
+*** Indexing
+述語に基づいて要素のインデックスを返し、その値で要素をソートする関数
+
+- -elem-index (elem list)
+- -elem-indices (elem list)
+- -find-index (pred list)
+- -find-last-index (pred list)
+- -find-indices (pred list)
+- -grade-up (comparator list)
+- -grade-down (comparator list)
+
+*** Set operations
+集合を表すリストのための関数
+Operations pretending lists are sets.
+
+- -union (list list2)
+- -difference (list list2)
+- -intersection (list list2)
+- -powerset (list)
+- -permutations (list)
+- -distinct (list)
+
+*** Tree operations
+木を表すリストのための関数
+
+- -tree-seq (branch children tree)
+- -tree-map (fn tree)
+- -tree-map-nodes (pred fun tree)
+- -tree-reduce (fn tree)
+- -tree-reduce-from (fn init-value tree)
+- -tree-mapreduce (fn folder tree)
+- -tree-mapreduce-from (fn folder init-value tree)
+- -clone (list)
+
+*** Side-effects
+副作用のためだけにリストを反復処理する関数。
+Functions iterating over lists for side-effect only.
+
+- -each (list fn)
+- -each-while (list pred fn)
+- -each-indexed (list fn)
+- -each-r (list fn)
+- -each-r-while (list pred fn)
+- -dotimes (num fn)
+- -doto (eval-initial-value &rest forms)
+
+*** Destructive operations
+- !cons (car cdr)
+- !cdr (list)
+
+*** Other list operations
+その他のリスト関数
+
+- -rotate (n list)
+- -repeat (n x)
+- -cons* (&rest args)
+- -snoc (list elem &rest elements)
+- -interpose (sep list)
+- -interleave (&rest lists)
+- -zip-with (fn list1 list2)
+- -zip (&rest lists)
+- -zip-fill (fill-value &rest lists)
+- -unzip (lists)
+- -cycle (list)
+- -pad (fill-value &rest lists)
+- -table (fn &rest lists)
+- -table-flat (fn &rest lists)
+- -first (pred list)
+- -some (pred list)
+- -last (pred list)
+- -first-item (list)
+- -second-item (arg1)
+- -third-item (arg1)
+- -fourth-item (list)
+- -fifth-item (list)
+- -last-item (list)
+- -butlast (list)
+- -sort (comparator list)
+- -list (&rest args)
+- -fix (fn list)
+
+*** from Clojure
+**** Threading macros
+Clojureのようなスレッディングマクロを提供する関数
+
+- -> (x &optional form &rest more)
+- ->> (x &optional form &rest more)
+- --> (x &rest forms)
+- -as-> (value variable &rest forms)
+- -some-> (x &optional form &rest more)
+- -some->> (x &optional form &rest more)
+- -some--> (x &optional form &rest more)
+
+**** Binding
+Clojureのようなletバインディングを提供する関数
+
+- -when-let (var-val &rest body)
+- -when-let* (vars-vals &rest body)
+- -if-let (var-val then &rest else)
+- -if-let* (vars-vals then &rest else)
+- -let (varlist &rest body)
+- -let* (varlist &rest body)
+- -lambda (match-form &rest body)
+- -setq (&rest forms)
+
+*** Function combinators
+Emacs24を必要とする関数。
+このパッケージとは分離されているため、追加としてdash-functionalパッケージが必要です。
+
+- -partial (fn &rest args)
+- -rpartial (fn &rest args)
+- -juxt (&rest fns)
+- -compose (&rest fns)
+- -applify (fn)
+- -on (operator transformer)
+- -flip (func)
+- -const (c)
+- -cut (&rest params)
+- -not (pred)
+- -orfn (&rest preds)
+- -andfn (&rest preds)
+- -iteratefn (fn n)
+- -fixfn (fn &optional equal-test halt-test)
+- -prodfn (&rest fns)
+
+* Footnotes
+[fn:1] あまり外部のパッケージに依存したくないなどの理由があり、
+単純なライブラリを使用することを回避しようとするプロジェクトもある。 
