@@ -1,25 +1,50 @@
-#+title: lispの同図像性とその周辺 ― leaf.el, seml-mode.elの内部構造に触れながら
-#+date: <2019-04-16 火 23:02>
+#+title: Lispの同図像性とその周辺
+#+subtitle: leaf.el, seml-mode.elの内部構造に触れながら
+#+author: conao3
+#+date: 2019-04-16
 #+tags: emacs, lisp, leaf.el, seml-mode.el
 
+#+reveal_root: ./reveal.js
+#+options: toc:1
+
+#+begin_src emacs-lisp
+  (let ((default-directory "~/Develop/git/reveal.js"))
+    (shell-command "npm install && npm start &"))
+#+end_src
+
 * はじめに
-「EmacsのためにEmacsを使っている」事に最近気づいたconao3です。
+EmacsのためにEmacsを使っている
 
-とりあえず私の脳内スタックを紹介します。
+** 自己紹介
+- 山下 直哉 (conao3)
+#+REVEAL: split
+#+caption: GitHub
+[[./image/github.png]]
 
+#+BEGIN_NOTES
+SSS
+#+END_NOTES
+
+
+
+
+
+** やることスタック
+#+REVEAL_HTML: <div style="float:left;">
 - 競プロしたい！
-- 当然Emacs使うでしょ
-  - init.el編集して、 ~flycheck~ とか動かしたいな。。
-  - 当然 ~use-package~ 使うでしょ
-    - ~use-package~ がEmacs-22で動かない \arrow ~leaf.el~ 開発
-      - Emacs-22で動くテストフレームワークが存在しない \arrow ~cort-test.el~ 開発
-      - Emacs-22で動くパッケージマネージャが存在しない \arrow ~feather.el~ 開発
-        - MELPAのレシピをあらかじめ変換しておきたい \arrow ~feather-recipes.el~ 開発
-        - そもそもMELPAが提供しているjsonが壊れている \arrow ~feather-melpa~ 開発
-        - .tar.gzをダウンロードさせるだけでいんじゃないか \arrow ~feather-server.el~ 開発
-      - CUIベースの ~custom~ ではなく、Webブラウザベースで設定したい \arrow ~leaf-browser.el~ 開発
-        - 当然HTMLを素で書く気にならないので、S式から変換させたい \arrow ~seml-mode.el~ 開発
-  - ~org-publish~ のセクションが肥大化している \arrow ~orglyth.el~ 開発
+- 当然Emacs
+  - init.el編集
+  - ~use-package~
+    - ~leaf.el~ 開発
+      - ~cort-test.el~ 開発
+      -  ~feather.el~ 開発
+        - ~feather-recipes.el~ 開発
+        - ~feather-melpa~ 開発
+        - ~feather-server.el~ 開発
+      - ~leaf-browser.el~ 開発
+        - ~seml-mode.el~ 開発
+  - ~orglyth.el~ 開発
+#+REVEAL_HTML: <div style="float:left;">
 
 つまりここに挙げたパッケージ群をちゃっちゃと開発し、どんどんスタックを ~pop~ していかないと、
 「競プロしたい！」という当初の目的まで辿り着けないという状況になっています。辛い。
@@ -34,8 +59,7 @@
 * Lispの評価器について
 ** Lispの評価
 Elispに限らず、lisp処理系は次のような仕組みを持っています。[fn:1][fn:2][fn:3][fn:4]
-
-「式」を次で定義します。
+*** 「式」を次で定義します。
 
 - アトムを「数値」と「文字列」と「シンボル」とする。
 - コンスセルを「(car . cdr)」と記述し、carとcdrに「アトム」か「コンスセル」が代入されるとする。
@@ -54,7 +78,9 @@ Elispに限らず、lisp処理系は次のような仕組みを持っていま�
    1. スペシャルフォームならば、第2引数以降のデータを評価せずに渡し、それぞれ固有の処理を行い、結果を返却する。
    2. マクロならば、第2引数以降のデータを評価せずに渡し、評価後のS式を改めて評価 (~eval~) し、結果を返却する。
    3. 関数ならば、第2引数以降のデータを順に評価 (~eval~) した上で、関数に渡 (~apply~) し、結果を返却する。
+   
 
+*** 特殊形式
 スペシャルフォームとは処理系内部にLispとは異なる言語で定義されたものです。
 Elispの場合、C言語で実装されている関数はすべてスペシャルフォームです。
 
