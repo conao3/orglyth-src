@@ -1,13 +1,17 @@
 #+title: Lispの同図像性とその周辺
 #+subtitle: leaf.el, seml-mode.elの内部構造に触れながら
 #+author: 山下 直哉 (@conao3)
+#+author: 山下 直哉 (@garario3)
 #+date: 2019-05-08
 #+tags: emacs, lisp, leaf.el, seml-mode.el
 
 #+reveal_root: ../
-#+reveal_control: nil
+
 #+reveal_miscinfo: 東京Emacs勉強会 - 端午の節句 at LINE株式会社
 #+options: toc:1 num:nil
+#+options: reveal_control:nil reveal_width:1000 reveal_height:700
+#+REVEAL_PLUGINS: classList markdown zoom notes
+#+REVEAL_PLUGINS: emacs lisp leaf.el seml-mode.el
 
 * init                                                             :noexport:
 #+begin_src emacs-lisp
@@ -15,29 +19,24 @@
     (shell-command "npm install && npm start &"))
 #+end_src
 
-* はじめに                                                         :noexport:
-EmacsのためにEmacsを使っている
-
-* 自己紹介                                                         :noexport:
+* はじめに
+** 自己紹介
 - 山下 直哉 (conao3)
-#+REVEAL: split
-#+caption: GitHub
+- 学業
+  - 広島大学工学部第2類 量子材料科学研究室 (二回目の)4年生
+    - 金や銅の基板に薬品を掛け、ナノレベルの計測/評価
+- 趣味
+  - Emacsのパッケージ開発
+  - 資格（応用情報(AP)/CCNP/情報科教員免許）
+  - GitHubに草を生やす
+
+** GitHubの草
 [[./image/github.png]]
 
-#+BEGIN_NOTES
-SSS
-#+END_NOTES
+** 普段、Emacsをどんなことに使っていますか？
+  EmacsのためにEmacsを使っている
 
-* code
-#+begin_src clojure
-  (defvar org-html-protect-char-alist
-    '(("&" . "&amp;")
-      ("<" . "&lt;")
-      (">" . "&gt;"))
-    "Alist of characters to be converted by `org-html-encode-plain-text'.")
-#+end_src
-
-** やることスタック                                               :noexport:
+** やることスタック
 #+REVEAL_HTML: <div style="float:left;">
 - 競プロしたい！
 - 当然Emacs
@@ -54,7 +53,8 @@ SSS
   - ~orglyth.el~ 開発
 #+REVEAL_HTML: <div style="float:left;">
 
-つまりここに挙げたパッケージ群をちゃっちゃと開発し、どんどんスタックを ~pop~ していかないと、
+#+begin_notes
+つまりここに挙げたパッケージ群をちゃちゃっと開発し、どんどんスタックを ~pop~ していかないと、
 「競プロしたい！」という当初の目的まで辿り着けないという状況になっています。辛い。
 
 そもそもがinit.elの編集から木が深くなっているので、 ~leaf.el~ 開発当初はほぼ裸のEmacsで編集していました。
@@ -63,11 +63,15 @@ SSS
 これだけのパッケージを開発していると、そこそこにアウトプットできるような知見が貯まってくるのですが、
 今回、[[https://tokyo-emacs.connpass.com/event/128038/][東京Emacs勉強会 端午の節句]]に15分の発表の機会を得ることが出来たので、
 その時間を考慮して、そのなかでも「Lispの同図像性」について発表するものです。
+#+end_notes
 
-* Lispの評価器について                                             :noexport:
-** Lispの評価
-Elispに限らず、lisp処理系は次のような仕組みを持っています。[fn:1][fn:2][fn:3][fn:4]
-*** 「式」を次で定義します。
+* Lispの評価器について
+参考[fn:1][fn:2][fn:3][fn:4][fn:5]
+** 式の定義
+| Atom      | Number / String / Symbol (t/nil/:symbol/'a) |
+| Cons-cell | (Atom . Atom)                               |
+| List      | (Atom . nil) / (Atom . (Atom . nil))        |
+** 「式」を次で定義します。
 
 - アトムを「数値」と「文字列」と「シンボル」とする。
 - コンスセルを「(car . cdr)」と記述し、carとcdrに「アトム」か「コンスセル」が代入されるとする。
@@ -77,7 +81,7 @@ Elispに限らず、lisp処理系は次のような仕組みを持っていま�
 なお、コンスセルのドットは字面上の意味がありますが、リストの3点リーダはシンボル群の略記です。
 さらに「 ~nil~ 」は「アトム」であり、「空リスト」であるとします。
 
-そして与えられた式を次のように評価 (~eval~) します。[fn:5]
+そして与えられた式を次のように評価 (~eval~) します。
 
 1. 式が、アトムの場合、以下のように処理する。
    1. シンボルならば、そのシンボルの値を返却する。
@@ -88,7 +92,7 @@ Elispに限らず、lisp処理系は次のような仕組みを持っていま�
    3. 関数ならば、第2引数以降のデータを順に評価 (~eval~) した上で、関数に渡 (~apply~) し、結果を返却する。
    
 
-*** 特殊形式
+** 特殊形式
 スペシャルフォームとは処理系内部にLispとは異なる言語で定義されたものです。
 Elispの場合、C言語で実装されている関数はすべてスペシャルフォームです。
 
@@ -135,7 +139,7 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
 2. マクロ
 3. コンパイラマクロ
 
-* leaf.elの概略                                                    :noexport:
+* leaf.elの概略
 [[https://github.com/conao3/leaf.el][leaf.el]]はjwiegley氏の[[https://github.com/jwiegley/use-package][use-package]]と同様に、Emacsのinie.elで頻出のイディオムを隠蔽し、編集しやすく、そして管理しやすくするものです。
 ~use-package~ はとても良く出来ていて、愛用していたのですが、問題もありました。（省略するので、別途[[https://qiita.com/conao3/items/82abfea7a4c81f946e60#use-package%25E3%2581%25AE%25E3%2581%25AB%25E4%25BB%2598%25E9%259A%258F%25E3%2581%2599%25E3%2582%258B%25E5%2595%258F%25E9%25A1%258C%25E7%2582%25B9][Qiita記事]]を参照）
 
@@ -204,9 +208,12 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
 
 ~leaf~ はマクロなのでElisp処理系は、実際の評価の前にマクロが展開し、その後、評価器が実際の評価を行います。
 
-* Footnotes                                                        :noexport:
+* Footnotes
 [fn:1] 東京大学 - [[http://www.jsk.t.u-tokyo.ac.jp/~inamura/lecture/download/20051205_soft3_lisp1.pdf][ソフトウェア第三 講義資料 - Lisp処理系, リスト処理]]
 [fn:2] Paren-holic - [[https://booth.pm/ja/items/1317263][3つのLisp 3つの世界]]
 [fn:3] STUART C. SHAPIRO - [[https://cse.buffalo.edu/~shapiro/Commonlisp/commonLisp.pdf][Common lisp - An Interacive approach]]
 [fn:4] Harold Abelson 他 著 和田 栄一 訳 - [[https://sicp.iijlab.net/fulltext/xcont.html][計算機プログラムの構造と解釈]]
 [fn:5] Richard Stallman 他 著 Ayatakesi 訳 - [[https://ayatakesi.github.io/lispref/24.5/elisp.html#Evaluation][GNU Emacs Lisp Reference Manual]]
+q
+
+
