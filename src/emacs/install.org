@@ -6,6 +6,22 @@ Emacsにはいろいろなパッチを当ててる人がいて、それぞれに
 
 インストールで躓くと何もやる気が起きなくなってしまうので、私がいつも使ってる方法を紹介します。
 * Mac
+** Mac Mojave
+*** brew
+brewのインストールをします。Emacs以外をbrewで管理する方針です。
+
+xcodeのインストールも必要なく、クリーンインストール後におもむろに実行しても問題ありません。
+#+begin_src shell
+  /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+#+end_src
+*** 依存パッケージのインストール
+#+begin_src shell
+brew install gnutls pkg-config libxml2 autoconf
+export PKG_CONFIG_PATH="/usr/local/opt/libxml2/lib/pkgconfig"
+#+end_src
+
+*** 
+** 
 Macでは[[https://nrid.nii.ac.jp/ja/nrid/1000000291295/][山本先生]]のパッチを当てたEmacs-Mac-Port(EMP)版のEmacsを使用しています。
 - brew
 

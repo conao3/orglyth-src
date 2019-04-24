@@ -1,0 +1,212 @@
+#+title: Lispの同図像性とその周辺
+#+subtitle: leaf.el, seml-mode.elの内部構造に触れながら
+#+author: 山下 直哉 (@conao3)
+#+date: 2019-05-08
+#+tags: emacs, lisp, leaf.el, seml-mode.el
+
+#+reveal_root: ../
+#+reveal_control: nil
+#+reveal_miscinfo: 東京Emacs勉強会 - 端午の節句 at LINE株式会社
+#+options: toc:1 num:nil
+
+* init                                                             :noexport:
+#+begin_src emacs-lisp
+  (let ((default-directory "~/Develop/git/reveal.js"))
+    (shell-command "npm install && npm start &"))
+#+end_src
+
+* はじめに                                                         :noexport:
+EmacsのためにEmacsを使っている
+
+* 自己紹介                                                         :noexport:
+- 山下 直哉 (conao3)
+#+REVEAL: split
+#+caption: GitHub
+[[./image/github.png]]
+
+#+BEGIN_NOTES
+SSS
+#+END_NOTES
+
+* code
+#+begin_src clojure
+  (defvar org-html-protect-char-alist
+    '(("&" . "&amp;")
+      ("<" . "&lt;")
+      (">" . "&gt;"))
+    "Alist of characters to be converted by `org-html-encode-plain-text'.")
+#+end_src
+
+** やることスタック                                               :noexport:
+#+REVEAL_HTML: <div style="float:left;">
+- 競プロしたい！
+- 当然Emacs
+  - init.el編集
+  - ~use-package~
+    - ~leaf.el~ 開発
+      - ~cort-test.el~ 開発
+      -  ~feather.el~ 開発
+        - ~feather-recipes.el~ 開発
+        - ~feather-melpa~ 開発
+        - ~feather-server.el~ 開発
+      - ~leaf-browser.el~ 開発
+        - ~seml-mode.el~ 開発
+  - ~orglyth.el~ 開発
+#+REVEAL_HTML: <div style="float:left;">
+
+つまりここに挙げたパッケージ群をちゃっちゃと開発し、どんどんスタックを ~pop~ していかないと、
+「競プロしたい！」という当初の目的まで辿り着けないという状況になっています。辛い。
+
+そもそもがinit.elの編集から木が深くなっているので、 ~leaf.el~ 開発当初はほぼ裸のEmacsで編集していました。
+最近は ~leaf.el~ が結構便利になってきたので、快適に開発ができるようになってきています。
+
+これだけのパッケージを開発していると、そこそこにアウトプットできるような知見が貯まってくるのですが、
+今回、[[https://tokyo-emacs.connpass.com/event/128038/][東京Emacs勉強会 端午の節句]]に15分の発表の機会を得ることが出来たので、
+その時間を考慮して、そのなかでも「Lispの同図像性」について発表するものです。
+
+* Lispの評価器について                                             :noexport:
+** Lispの評価
+Elispに限らず、lisp処理系は次のような仕組みを持っています。[fn:1][fn:2][fn:3][fn:4]
+*** 「式」を次で定義します。
+
+- アトムを「数値」と「文字列」と「シンボル」とする。
+- コンスセルを「(car . cdr)」と記述し、carとcdrに「アトム」か「コンスセル」が代入されるとする。
+- リストを「(a b ... x)」と記述し、「空リスト」か、「末尾のコンスセルのcdr部に ~nil~ が代入されたもの」とする。
+- 式を「アトム」か「コンスセル」か「リスト」さらに「式のリスト」とする。
+
+なお、コンスセルのドットは字面上の意味がありますが、リストの3点リーダはシンボル群の略記です。
+さらに「 ~nil~ 」は「アトム」であり、「空リスト」であるとします。
+
+そして与えられた式を次のように評価 (~eval~) します。[fn:5]
+
+1. 式が、アトムの場合、以下のように処理する。
+   1. シンボルならば、そのシンボルの値を返却する。
+   2. それ以外（数値、文字列など）ならば、それ自身を返却する。
+2. 式が、リストフォームならば、リストフォームの先頭データの種類によって、以下のように処理する。
+   1. スペシャルフォームならば、第2引数以降のデータを評価せずに渡し、それぞれ固有の処理を行い、結果を返却する。
+   2. マクロならば、第2引数以降のデータを評価せずに渡し、評価後のS式を改めて評価 (~eval~) し、結果を返却する。
+   3. 関数ならば、第2引数以降のデータを順に評価 (~eval~) した上で、関数に渡 (~apply~) し、結果を返却する。
+   
+
+*** 特殊形式
+スペシャルフォームとは処理系内部にLispとは異なる言語で定義されたものです。
+Elispの場合、C言語で実装されている関数はすべてスペシャルフォームです。
+
+スペシャルフォームの最たる例は条件分岐 ~(if COND THEN-PART ELSE-PART...)~ で、 ~COND~ が真の場合、 ~ELSE-PART~ は評価されません。
+この性質は関数の場合と決定的に異なっており、例えば条件によって0除算エラーが起こってしまうなどのクリティカルな状況を回避することが出来ます。
+
+条件分岐のような制御構造は通常の言語であれば、拡張不可(処理系のアップデートが必要)ですが、Lispであればマクロを使用することで自分で定義することが出来ます。
+
+# Elispにおけるスペシャルフォームのすべてを示します。
+# - 条件分岐
+#   - and
+#   - or
+#   - if
+#   - cond
+# - 繰り返し
+#   - while
+# - 大域脱出とエラー処理
+#   - catch
+#   - condition-case
+#   - unwind-protect
+# - Lispオブジェクト生成
+#   - quote
+#   - function
+#   - lambda
+#   - setq
+#   - setq-default
+#   - defvar
+#   - defconst
+# - シーケンス
+#   - prog1
+#   - prog2
+#   - progn
+# - ローカル変数
+#   - let
+#   - let*
+# - Emacsに特有の操作
+#   - interactive
+#   - save-current-buffer
+#   - save-excursion
+#   - save-restriction
+#   - track-mouse
+** 3種類のマクロ
+1. リーダマクロ
+2. マクロ
+3. コンパイラマクロ
+
+* leaf.elの概略                                                    :noexport:
+[[https://github.com/conao3/leaf.el][leaf.el]]はjwiegley氏の[[https://github.com/jwiegley/use-package][use-package]]と同様に、Emacsのinie.elで頻出のイディオムを隠蔽し、編集しやすく、そして管理しやすくするものです。
+~use-package~ はとても良く出来ていて、愛用していたのですが、問題もありました。（省略するので、別途[[https://qiita.com/conao3/items/82abfea7a4c81f946e60#use-package%25E3%2581%25AE%25E3%2581%25AB%25E4%25BB%2598%25E9%259A%258F%25E3%2581%2599%25E3%2582%258B%25E5%2595%258F%25E9%25A1%258C%25E7%2582%25B9][Qiita記事]]を参照）
+
+- ~:if~ ~:disabled~ で無効化されているパッケージがなぜか読み込まれている。
+- 新しいキーワードを追加するのが困難。
+- あるパッケージだけ違うディストリビューションからダウンロードできない。
+- (use-packageに依存したinit.elをEmacs-22で読み込むと骨抜きになる。)
+
+主に最初の3つが大きな不満点でした。
+最後の点は許容できたのですが、作り直すなら縛りプレイをすることにしました。
+
+さて、説明のために次の簡単なマクロを定義した上で、
+
+#+begin_src emacs-lisp
+  (defmacro p (form)
+    `(progn
+       (pp (macroexpand-1 ',form))
+       nil))
+
+  (defmacro po (form)
+    `(progn
+       (pp ,form)
+       nil))
+#+end_src
+
+~leaf.el~ は次のような変換をするマクロを提供するものです。
+
+#+begin_src emacs-lisp
+  (p
+   (leaf yasnippet
+     :ensure t
+     :custom ((yas-indent-line . 'fixed))
+     :bind (:map yas-minor-mode-map
+                 ("C-c y i" . yas-insert-snippet)
+                 ("C-c y n" . yas-new-snippet)
+                 ("C-c y v" . yas-visit-snippet-file)
+                 ("C-c y l" . yas-describe-tables)
+                 ("C-c y g" . yas-reload-all))
+     :config
+     (leaf yasnippet-snippets :ensure t)
+     (leaf yatemplate :ensure t)
+     (yas-global-mode 1)))
+  ;; => (progn
+  ;;      (leaf-meta-backend/:ensure 'yasnippet '(t))
+  ;;      (leaf-meta-backend/:bind 'yasnippet
+  ;;                               '((:map yas-minor-mode-map
+  ;;                                       ("C-c y i" . yas-insert-snippet)
+  ;;                                       ("C-c y n" . yas-new-snippet)
+  ;;                                       ("C-c y v" . yas-visit-snippet-file)
+  ;;                                       ("C-c y l" . yas-describe-tables)
+  ;;                                       ("C-c y g" . yas-reload-all))))
+  ;;      (custom-set-variables '(yas-indent-line 'fixed))
+  ;;      (leaf yasnippet-snippets :ensure t)
+  ;;      (leaf yatemplate :ensure t)
+  ;;      (yas-global-mode 1))
+#+end_src
+
+#+begin_src emacs-lisp
+  (p
+   (leaf yasnippet
+     :disabled t
+     :ensure t
+     :custom ((yas-indent-line . 'fixed))))
+  ;; => nil
+#+end_src
+
+~leaf~ はマクロなのでElisp処理系は、実際の評価の前にマクロが展開し、その後、評価器が実際の評価を行います。
+
+* Footnotes                                                        :noexport:
+[fn:1] 東京大学 - [[http://www.jsk.t.u-tokyo.ac.jp/~inamura/lecture/download/20051205_soft3_lisp1.pdf][ソフトウェア第三 講義資料 - Lisp処理系, リスト処理]]
+[fn:2] Paren-holic - [[https://booth.pm/ja/items/1317263][3つのLisp 3つの世界]]
+[fn:3] STUART C. SHAPIRO - [[https://cse.buffalo.edu/~shapiro/Commonlisp/commonLisp.pdf][Common lisp - An Interacive approach]]
+[fn:4] Harold Abelson 他 著 和田 栄一 訳 - [[https://sicp.iijlab.net/fulltext/xcont.html][計算機プログラムの構造と解釈]]
+[fn:5] Richard Stallman 他 著 Ayatakesi 訳 - [[https://ayatakesi.github.io/lispref/24.5/elisp.html#Evaluation][GNU Emacs Lisp Reference Manual]]

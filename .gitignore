@@ -34,6 +34,7 @@ sitemap.inc
 index.html
 /src/**/*.html
 /src/**/*.tex
+/src/**/*.txt
 /src/**/*.pdf
 /archives/
 
