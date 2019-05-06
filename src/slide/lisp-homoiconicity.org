@@ -10,8 +10,8 @@
 #+reveal_miscinfo: 東京Emacs勉強会 - 端午の節句 at LINE株式会社
 #+options: toc:1 num:nil
 #+options: reveal_control:nil reveal_width:1000 reveal_height:700
-#+REVEAL_PLUGINS: classList markdown zoom notes
-#+REVEAL_PLUGINS: emacs lisp leaf.el seml-mode.el
+# #+REVEAL_PLUGINS: classList markdown zoom notes
+# #+REVEAL_PLUGINS: emacs lisp leaf.el seml-mode.el
 
 * init                                                             :noexport:
 #+begin_src emacs-lisp
