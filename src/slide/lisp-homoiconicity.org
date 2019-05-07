@@ -90,7 +90,7 @@ Emacsのために@@html:<br />@@Emacsを使っている
 データとプログラムが@@html:<br />@@同じ形式で書ける
 #+REVEAL_HTML: </div>
  
-** クオートとバッククオート - 初級編
+** evalとbackquote - 初級編
 *eval* と *backquote* の相性は悪魔的
 #+BEGIN_SRC emacs-lisp
 '(+ 1 2 3 4 5 (+ 1 2 3 4 5))
@@ -104,7 +104,7 @@ Emacsのために@@html:<br />@@Emacsを使っている
 ;; => 30
 #+END_SRC
 
-** クオートとバッククオート - 中級編
+** evalとbackquote - 中級編
 
 #+BEGIN_SRC emacs-lisp
 (number-sequence 1 5)
@@ -121,7 +121,7 @@ Emacsのために@@html:<br />@@Emacsを使っている
 ;; => 30
 #+END_SRC
 
-** クオートとバッククオート - 上級編
+** evalとbackquote - 上級編
 
 #+BEGIN_SRC emacs-lisp
   `(+ (+ ,@(number-sequence 1 5))
@@ -254,8 +254,8 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
 #+ATTR_REVEAL: :frag (appear)
 - 内部構造の一新
 - 圧倒的な見通しやすさ
-  - use-package: 11ファイル1800行
-  - leaf.el: 1ファイル600行 (33%)
+  - use-package: *11ファイル1800行*
+  - leaf.el: *1ファイル600行* (33%)
 - キーワード追加の簡便さ
 - use-packageに勝る、引数入力の柔軟さ
 - leafに渡す引数の自由な評価
@@ -277,6 +277,7 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
 #+end_src
 
 ** leafの例
+#+REVEAL_HTML: <div style="font-size:0.8em">
 #+begin_src emacs-lisp
   (p
    (leaf yasnippet
@@ -303,8 +304,10 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
   ;;                  ("C-c y i" . yas-insert-snippet)
   ;;                  ("C-c y n" . yas-new-snippet)))
 #+end_src
+#+REVEAL_HTML: </div>
 
 ** use-packageの実装
+#+REVEAL_HTML: <div style="font-size:0.8em">
 #+BEGIN_SRC emacs-lisp
 (defmacro use-package (name &rest args)
   (declare (indent 1))
@@ -326,10 +329,14 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
       (when use-package-compute-statistics
         `((use-package-statistics-gather :use-package ',name t)))))))
 #+END_SRC
-use-package-core？ use-package-concat？
+#+REVEAL_HTML: </div>
+
+- use-package-core？
+- use-package-concat？
 
 #+REVEAL: split
 
+#+REVEAL_HTML: <div style="font-size:0.8em">
 #+BEGIN_SRC emacs-lisp
 (defmacro use-package-core (name args)
   `(let* ((args* (use-package-normalize-keywords ,name ,args))
@@ -352,12 +359,14 @@ use-package-core？ use-package-concat？
        (and (plist-get args* :demand)
             (list :demand t)))))
 #+END_SRC
+#+REVEAL_HTML: </div>
 
 - use-package-normalize-keywords？
 - use-package-process-keywords？
 
 #+REVEAL: split
 
+#+REVEAL_HTML: <div style="font-size:0.8em">
 #+BEGIN_SRC emacs-lisp
 (defun use-package-process-keywords (name plist &optional state)
   (declare (indent 1))
@@ -374,11 +383,13 @@ use-package-core？ use-package-concat？
           (use-package-error
            (format "Keyword handler not defined: %s" handler)))))))
 #+END_SRC
+#+REVEAL_HTML: </div>
 
 - (handler (concat "use-package-handler/" (symbol-name keyword)))？
 
 #+REVEAL: split
 
+#+REVEAL_HTML: <div style="font-size:0.8em">
 #+BEGIN_SRC emacs-lisp
   (defalias 'use-package-normalize/:config 'use-package-normalize-forms)
 
@@ -401,9 +412,11 @@ use-package-core？ use-package-concat？
        (when use-package-compute-statistics
          `((use-package-statistics-gather :config ',name t))))))
 #+END_SRC
+#+REVEAL_HTML: </div>
 
-- キーワードの数だけ normalize と handler を定義
+- キーワードの数だけ normalize と handler を関数として定義
 - 当然 defalias の嵐
+
 ** いや、、、
 #+REVEAL_HTML: <div style="height:3em"></div>
 #+REVEAL_HTML: <div style="font-size:5em">
@@ -431,6 +444,7 @@ use-package-core？ use-package-concat？
 
 #+REVEAL: split
 
+#+REVEAL_HTML: <div style="font-size:0.8em">
 #+BEGIN_SRC emacs-lisp
 (defun leaf-process-keywords (name plist)
   (when plist
@@ -453,12 +467,14 @@ use-package-core？ use-package-concat？
       (cond
        ,@leaf-normarize))))
 #+END_SRC
+#+REVEAL_HTML: </div>
 
 - (plist-get (cdr leaf-keywords) key)？
 - leaf-normarize？ 変数？
 
 #+REVEAL: split
 
+#+REVEAL_HTML: <div style="font-size:0.7em">
 #+BEGIN_SRC emacs-lisp
   (defvar leaf-keywords
     '(:dummy
@@ -481,19 +497,11 @@ use-package-core？ use-package-concat？
       
       ((memq key '(:load-path :commands :after :defvar))
        (delete-dups (delq nil (leaf-flatten value))))
-      
-      ((memq key '(:bind :bind*))
-       (let ((ret) (fn))
-         (setq fn (lambda (elm ret)
-                    (cond
-                     ((leaf-pairp elm)
-#+END_SRC
 
-** 同図像性により
-#+REVEAL_HTML: <div style="height:1.5em"></div>
-#+REVEAL_HTML: <div style="font-size:3em">
-実装を *データ* として記述できた
+      ...))
+#+END_SRC
 #+REVEAL_HTML: </div>
+同図像性により、実装を *データ* として記述できる
 
 ** 実装をデータとして記述するメリット
 - 細々とした条件分岐部分を切り出す
@@ -515,18 +523,12 @@ use-package-core？ use-package-concat？
 
 #+BEGIN_SRC emacs-lisp
 (defun cort-test-test (test)
-  "Actually execute TEST.  TEST expect (METHOD EXPECT GIVEN).
-Evaluate GIVEN to check it match EXPECT.
-If match, return t, otherwise return nil."
   (let ((_name  (nth 0 test))
         (method (nth 1 test))
         (expect (nth 2 test))
         (given  (nth 3 test)))
     (if (eq method :cort-error)
-        (eval
-         `(condition-case err
-              (eval ,given)
-            (,expect t)))
+        (eval `(condition-case err (eval ,given) (,expect t)))
       (funcall (intern
                 (substring (symbol-name method) 1))
                (eval given) (eval expect)))))
@@ -537,16 +539,17 @@ If match, return t, otherwise return nil."
 #+REVEAL_HTML: <div style="font-size:1.5em">
 #+ATTR_REVEAL: :frag (appear)
 *何かの式/操作* を評価/実行したとき@@html:<br />@@
-*期待する値* と *等しい* かどうか確かめる。
+*期待する値* と *等しい* かどうか確かめる
 #+REVEAL_HTML: </div>
 #+REVEAL_HTML: <div style="height:1.5em"></div>
+#+ATTR_REVEAL: :frag (appear)
 - 結果を見やすく表示する
 - 失敗した場合、デバッグの援助となる情報を出力する
 
 ** cort-deftest
-*テストの宣言* を行ったときにテストを実行してはいけない。
-
-あくまでも *テストの宣言* であり、テストを保存するだけ。
+- テストの宣言を行ったときに *テストを実行してはいけない*
+- あくまでも *テストの宣言* であり、テストを保存するのみ
+- 同図像性がなかったらどうやって定義するのか。。
 
 #+BEGIN_SRC emacs-lisp
 (cort-deftest arith
