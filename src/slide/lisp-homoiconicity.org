@@ -1,7 +1,6 @@
 #+title: Lispの同図像性とその周辺
 #+subtitle: leaf.el, seml-mode.elの内部構造に触れながら
 #+author: 山下 直哉 (@conao3)
-#+author: 山下 直哉 (@garario3)
 #+date: 2019-05-08
 #+tags: emacs, lisp, leaf.el, seml-mode.el
 
@@ -9,13 +8,11 @@
 
 #+reveal_miscinfo: 東京Emacs勉強会 - 端午の節句 at LINE株式会社
 #+options: toc:1 num:nil
-#+options: reveal_control:nil reveal_width:1000 reveal_height:700
-# #+REVEAL_PLUGINS: classList markdown zoom notes
-# #+REVEAL_PLUGINS: emacs lisp leaf.el seml-mode.el
+#+options: reveal_control:nil reveal_width:1200 reveal_height:800
 
 * init                                                             :noexport:
 #+begin_src emacs-lisp
-  (let ((default-directory "~/Develop/git/reveal.js"))
+  (let ((default-directory "~/dev/repos/reveal.js"))
     (shell-command "npm install && npm start &"))
 #+end_src
 
@@ -23,35 +20,45 @@
 ** 自己紹介
 - 山下 直哉 (conao3)
 - 学業
-  - 広島大学工学部第2類 量子材料科学研究室 (二回目の)4年生
-    - 金や銅の基板に薬品を掛け、ナノレベルの計測/評価
+  - 広島大学工学部第2類@@html:<br />@@量子材料科学研究室 (二回目の)4年生
+    - 金や銅の基板に薬品をかけ@@html:<br />@@ナノレベルの計測/評価
 - 趣味
   - Emacsのパッケージ開発
   - 資格（応用情報(AP)/CCNP/情報科教員免許）
   - GitHubに草を生やす
 
 ** GitHubの草
-[[./image/github.png]]
+[[./images/github.png]]
 
 ** 普段、Emacsをどんなことに使っていますか？
-  EmacsのためにEmacsを使っている
+#+REVEAL_HTML: <div style="height:150px"></div>
+#+REVEAL_HTML: <div style="font-size:2em">
+#+ATTR_REVEAL: :frag (appear)
+Emacsのために@@html:<br />@@Emacsを使っている
+#+REVEAL_HTML: </div>
 
 ** やることスタック
-#+REVEAL_HTML: <div style="float:left;">
+#+REVEAL_HTML: <div style="font-size:1em">
+#+ATTR_REVEAL: :frag (appear)
 - 競プロしたい！
 - 当然Emacs
+  #+ATTR_REVEAL: :frag (appear)
   - init.el編集
   - ~use-package~
+    #+ATTR_REVEAL: :frag (appear)
     - ~leaf.el~ 開発
+      #+ATTR_REVEAL: :frag (appear)
       - ~cort-test.el~ 開発
       -  ~feather.el~ 開発
+        #+ATTR_REVEAL: :frag (appear)
         - ~feather-recipes.el~ 開発
         - ~feather-melpa~ 開発
         - ~feather-server.el~ 開発
       - ~leaf-browser.el~ 開発
+        #+ATTR_REVEAL: :frag (appear)
         - ~seml-mode.el~ 開発
   - ~orglyth.el~ 開発
-#+REVEAL_HTML: <div style="float:left;">
+#+REVEAL_HTML: </div>
 
 #+begin_notes
 つまりここに挙げたパッケージ群をちゃちゃっと開発し、どんどんスタックを ~pop~ していかないと、
@@ -65,14 +72,111 @@
 その時間を考慮して、そのなかでも「Lispの同図像性」について発表するものです。
 #+end_notes
 
+** いろんなパッケージをElispで書いてみて
+#+REVEAL_HTML: <div style="height:2em"></div>
+#+REVEAL_HTML: <div style="font-size:2.5em">
+#+ATTR_REVEAL: :frag (appear)
+同図像性ってすごい！！
+#+REVEAL_HTML: </div>
+#+REVEAL_HTML: <div style="height:1.5em"></div>
+
+#+ATTR_REVEAL: :frag (appear)
+同図像性を使わずにElispのパッケージを書くほうが難しい
+
+** 同図像性とは
+#+REVEAL_HTML: <div style="height:2em"></div>
+#+REVEAL_HTML: <div style="font-size:2.5em">
+#+ATTR_REVEAL: :frag (appear)
+データとプログラムが@@html:<br />@@同じ形式で書ける
+#+REVEAL_HTML: </div>
+ 
+** クオートとバッククオート - 初級編
+*eval* と *backquote* の相性は悪魔的
+#+BEGIN_SRC emacs-lisp
+'(+ 1 2 3 4 5 (+ 1 2 3 4 5))
+;; => (+ 1 2 3 4 5 (+ 1 2 3 4 5))
+
+`(+ 1 2 3 4 5 ,(+ 1 2 3 4 5))
+;; => (+ 1 2 3 4 5 15)
+
+(eval
+ `(+ 1 2 3 4 5 ,(+ 1 2 3 4 5)))
+;; => 30
+#+END_SRC
+
+** クオートとバッククオート - 中級編
+
+#+BEGIN_SRC emacs-lisp
+(number-sequence 1 5)
+;; => (1 2 3 4 5)
+
+`(+ 1 2 3 4 5 ,(number-sequence 1 5))
+;; => (+ 1 2 3 4 5 (1 2 3 4 5))
+
+`(+ 1 2 3 4 5 ,@(number-sequence 1 5))
+;; => (+ 1 2 3 4 5 1 2 3 4 5)
+
+(eval
+ `(+ 1 2 3 4 5 ,@(number-sequence 1 5)))
+;; => 30
+#+END_SRC
+
+** クオートとバッククオート - 上級編
+
+#+BEGIN_SRC emacs-lisp
+  `(+ (+ ,@(number-sequence 1 5))
+      (+ ,@(number-sequence 11 15))
+      (+ ,@(number-sequence 21 25)))
+  ;; => (+ (+ 1 2 3 4 5) (+ 11 12 13 14 15) (+ 21 22 23 24 25))
+
+  `(+ ,@(mapcar (lambda (elm)
+                  `(+ ,@(number-sequence (car elm) (cdr elm))))
+                '((1 . 5) (11 . 15) (21 . 25))))
+  ;; => (+ (+ 1 2 3 4 5) (+ 11 12 13 14 15) (+ 21 22 23 24 25))
+
+  (eval
+   `(+ ,@(mapcar (lambda (elm)
+                   `(+ ,@(number-sequence (car elm) (cdr elm))))
+                 '((1 . 5) (11 . 15) (21 . 25)))))
+  ;; => 195
+#+END_SRC
+
+** つまり
+#+ATTR_REVEAL: :frag (appear)
+- 目的のS式を全力で構築した後に *eval* できる！
+  #+ATTR_REVEAL: :frag (appear)
+  - Lisp - *LISt Processing* 言語の本領発揮
+  - *すべての問題解決* を *リスト操作* に還元する
+- evalした結果も *S式を返す* 場合、
+  #+ATTR_REVEAL: :frag (appear)
+  - 結果たちをかき集めて、 *目的のS式を構築* できる！
+- S式の *構築フェイズ* とS式の *実行フェイズ* を分けられる
+  #+ATTR_REVEAL: :frag (appear)
+  - *マクロ* へ
+
 * Lispの評価器について
 参考[fn:1][fn:2][fn:3][fn:4][fn:5]
-** 式の定義
-| Atom      | Number / String / Symbol (t/nil/:symbol/'a) |
-| Cons-cell | (Atom . Atom)                               |
-| List      | (Atom . nil) / (Atom . (Atom . nil))        |
-** 「式」を次で定義します。
+** S式の定義と評価
+| Atom      | Number / String / Symbol (t / nil / :symbol / 'a) |
+| Cons-cell | (Atom . Atom)                                     |
+| List      | (Atom . nil) / (Atom . ... (Atom . nil))          |
+|-----------+---------------------------------------------------|
+| S-exp     | Atom / Cons-cell / List                           |
 
+#+REVEAL_HTML: <div style="height:0.5em"></div>
+#+ATTR_REVEAL: :frag (appear)
+1. 評価したS式が *Atom* の場合
+   #+ATTR_REVEAL: :frag (appear)
+   1. *Symbol* なら、そのシンボルの値を返却
+   2. それ以外なら、それ自身の値を返却
+2. 評価したS式が *List* の場合、リストの先頭要素が、
+   #+ATTR_REVEAL: :frag (appear)
+   1. *スペシャルフォーム* \to 引数を評価せずに固有の操作
+   2. *マクロ* \to 引数を評価せずにマクロ評価、その後eval
+   3. *関数* \to 引数を評価し、関数適用
+
+
+#+BEGIN_NOTES
 - アトムを「数値」と「文字列」と「シンボル」とする。
 - コンスセルを「(car . cdr)」と記述し、carとcdrに「アトム」か「コンスセル」が代入されるとする。
 - リストを「(a b ... x)」と記述し、「空リスト」か、「末尾のコンスセルのcdr部に ~nil~ が代入されたもの」とする。
@@ -90,9 +194,10 @@
    1. スペシャルフォームならば、第2引数以降のデータを評価せずに渡し、それぞれ固有の処理を行い、結果を返却する。
    2. マクロならば、第2引数以降のデータを評価せずに渡し、評価後のS式を改めて評価 (~eval~) し、結果を返却する。
    3. 関数ならば、第2引数以降のデータを順に評価 (~eval~) した上で、関数に渡 (~apply~) し、結果を返却する。
-   
+#+END_NOTES   
 
 ** 特殊形式
+#+BEGIN_NOTES
 スペシャルフォームとは処理系内部にLispとは異なる言語で定義されたものです。
 Elispの場合、C言語で実装されている関数はすべてスペシャルフォームです。
 
@@ -100,59 +205,65 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
 この性質は関数の場合と決定的に異なっており、例えば条件によって0除算エラーが起こってしまうなどのクリティカルな状況を回避することが出来ます。
 
 条件分岐のような制御構造は通常の言語であれば、拡張不可(処理系のアップデートが必要)ですが、Lispであればマクロを使用することで自分で定義することが出来ます。
+#+END_NOTES
+- 条件分岐と繰り返し
+  - and or if cond while
+- 大域脱出とエラー処理
+  - catch condition-case unwind-protect
+- Lispオブジェクト生成と束縛
+  - quote function lambda setq setq-default defvar defconst
+- シーケンス
+  - prog1 prog2 progn
+- ローカル変数
+  - let let*
+- Emacsに特有の操作
+  - interactive save-current-buffer save-excursion save-restriction track-mouse
 
-# Elispにおけるスペシャルフォームのすべてを示します。
-# - 条件分岐
-#   - and
-#   - or
-#   - if
-#   - cond
-# - 繰り返し
-#   - while
-# - 大域脱出とエラー処理
-#   - catch
-#   - condition-case
-#   - unwind-protect
-# - Lispオブジェクト生成
-#   - quote
-#   - function
-#   - lambda
-#   - setq
-#   - setq-default
-#   - defvar
-#   - defconst
-# - シーケンス
-#   - prog1
-#   - prog2
-#   - progn
-# - ローカル変数
-#   - let
-#   - let*
-# - Emacsに特有の操作
-#   - interactive
-#   - save-current-buffer
-#   - save-excursion
-#   - save-restriction
-#   - track-mouse
 ** 3種類のマクロ
-1. リーダマクロ
-2. マクロ
-3. コンパイラマクロ
+#+REVEAL_HTML: <div style="height:2em"></div>
+#+REVEAL_HTML: <div style="font-size:1.5em">
+#+ATTR_REVEAL: :frag (appear)
+- リーダマクロ (Elispにはない。。。)
+- マクロ
+- コンパイラマクロ
+#+REVEAL_HTML: </div>
 
-* leaf.elの概略
+** 時間がないので
+#+REVEAL_HTML: <div style="height:3em"></div>
+#+REVEAL_HTML: <div style="font-size:5em">
+カット
+#+REVEAL_HTML: </div>
+
+* use-package by jwiegley
+#+BEGIN_NOTES
 [[https://github.com/conao3/leaf.el][leaf.el]]はjwiegley氏の[[https://github.com/jwiegley/use-package][use-package]]と同様に、Emacsのinie.elで頻出のイディオムを隠蔽し、編集しやすく、そして管理しやすくするものです。
 ~use-package~ はとても良く出来ていて、愛用していたのですが、問題もありました。（省略するので、別途[[https://qiita.com/conao3/items/82abfea7a4c81f946e60#use-package%25E3%2581%25AE%25E3%2581%25AB%25E4%25BB%2598%25E9%259A%258F%25E3%2581%2599%25E3%2582%258B%25E5%2595%258F%25E9%25A1%258C%25E7%2582%25B9][Qiita記事]]を参照）
+#+END_NOTES
+#+ATTR_REVEAL: :frag (appear)
+- ~:if~ ~:disabled~ で無効化しているのに読み込む
+- 新しいキーワードを追加するのが困難
+- あるパッケージだけ違うディストリビューションにできない
+- (init.elをEmacs-22, 23で読み込めない)
 
-- ~:if~ ~:disabled~ で無効化されているパッケージがなぜか読み込まれている。
-- 新しいキーワードを追加するのが困難。
-- あるパッケージだけ違うディストリビューションからダウンロードできない。
-- (use-packageに依存したinit.elをEmacs-22で読み込むと骨抜きになる。)
-
+#+BEGIN_NOTES
 主に最初の3つが大きな不満点でした。
 最後の点は許容できたのですが、作り直すなら縛りプレイをすることにしました。
+#+END_NOTES
 
-さて、説明のために次の簡単なマクロを定義した上で、
+* leaf.el
+#+ATTR_REVEAL: :frag (appear)
+- 内部構造の一新
+- 圧倒的な見通しやすさ
+  - use-package: 11ファイル1800行
+  - leaf.el: 1ファイル600行 (33%)
+- キーワード追加の簡便さ
+- use-packageに勝る、引数入力の柔軟さ
+- leafに渡す引数の自由な評価
+- Emacs-22からの動作を保証
+  - (Docker imageが用意できないのでEmacs-22はDropするかも。。)
 
+** マクロ定義
+簡単のために、次のマクロを定義
 #+begin_src emacs-lisp
   (defmacro p (form)
     `(progn
@@ -165,8 +276,7 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
        nil))
 #+end_src
 
-~leaf.el~ は次のような変換をするマクロを提供するものです。
-
+** leafの例
 #+begin_src emacs-lisp
   (p
    (leaf yasnippet
@@ -174,39 +284,314 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
      :custom ((yas-indent-line . 'fixed))
      :bind (:map yas-minor-mode-map
                  ("C-c y i" . yas-insert-snippet)
-                 ("C-c y n" . yas-new-snippet)
-                 ("C-c y v" . yas-visit-snippet-file)
-                 ("C-c y l" . yas-describe-tables)
-                 ("C-c y g" . yas-reload-all))
+                 ("C-c y n" . yas-new-snippet))
      :config
      (leaf yasnippet-snippets :ensure t)
      (leaf yatemplate :ensure t)
      (yas-global-mode 1)))
   ;; => (progn
-  ;;      (leaf-meta-backend/:ensure 'yasnippet '(t))
-  ;;      (leaf-meta-backend/:bind 'yasnippet
-  ;;                               '((:map yas-minor-mode-map
-  ;;                                       ("C-c y i" . yas-insert-snippet)
-  ;;                                       ("C-c y n" . yas-new-snippet)
-  ;;                                       ("C-c y v" . yas-visit-snippet-file)
-  ;;                                       ("C-c y l" . yas-describe-tables)
-  ;;                                       ("C-c y g" . yas-reload-all))))
-  ;;      (custom-set-variables '(yas-indent-line 'fixed))
-  ;;      (leaf yasnippet-snippets :ensure t)
-  ;;      (leaf yatemplate :ensure t)
-  ;;      (yas-global-mode 1))
+  ;;       (use-package-ensure-elpa 'yasnippet '(t) 'nil)
+  ;;       (customize-set-variable 'yas-indent-line 'fixed)
+  ;;       (autoload #'yas-insert-snippet "yasnippet" nil t)
+  ;;       (autoload #'yas-new-snippet "yasnippet" nil t)
+  ;;       (eval-after-load 'yasnippet
+  ;;         '(progn
+  ;;            (leaf yasnippet-snippets :ensure t)
+  ;;            (leaf yatemplate :ensure t)
+  ;;            (yas-global-mode 1)))
+  ;;       (bind-keys :package yasnippet :map yas-minor-mode-map
+  ;;                  ("C-c y i" . yas-insert-snippet)
+  ;;                  ("C-c y n" . yas-new-snippet)))
 #+end_src
 
-#+begin_src emacs-lisp
-  (p
-   (leaf yasnippet
-     :disabled t
-     :ensure t
-     :custom ((yas-indent-line . 'fixed))))
-  ;; => nil
-#+end_src
+** use-packageの実装
+#+BEGIN_SRC emacs-lisp
+(defmacro use-package (name &rest args)
+  (declare (indent 1))
+  (unless (memq :disabled args)
+    (macroexp-progn
+     (use-package-concat
+      (when use-package-compute-statistics
+        `((use-package-statistics-gather :use-package ',name nil)))
+      (if (eq use-package-verbose 'errors)
+          (use-package-core name args)
+        (condition-case-unless-debug err
+            (use-package-core name args)
+          (error
+           (ignore
+            (display-warning
+             'use-package
+             (format "Failed to parse package %s: %s"
+                     name (error-message-string err)) :error)))))
+      (when use-package-compute-statistics
+        `((use-package-statistics-gather :use-package ',name t)))))))
+#+END_SRC
+use-package-core？ use-package-concat？
 
-~leaf~ はマクロなのでElisp処理系は、実際の評価の前にマクロが展開し、その後、評価器が実際の評価を行います。
+#+REVEAL: split
+
+#+BEGIN_SRC emacs-lisp
+(defmacro use-package-core (name args)
+  `(let* ((args* (use-package-normalize-keywords ,name ,args))
+          (use-package--form
+           (if (eq use-package-verbose 'debug)
+               (concat "\n\n"
+                       (pp-to-string `(use-package ,name ,@,args))
+                       "\n  -->\n\n"
+                       (pp-to-string `(use-package ,name ,@args*))
+                       "\n  ==>\n\n"
+                       (pp-to-string
+                        (macroexp-progn
+                         (let ((use-package-verbose 'errors)
+                               (use-package-expand-minimally t))
+                           (use-package-process-keywords name args*
+                             (and (plist-get args* :demand)
+                                  (list :demand t)))))))
+             "")))
+     (use-package-process-keywords name args*
+       (and (plist-get args* :demand)
+            (list :demand t)))))
+#+END_SRC
+
+- use-package-normalize-keywords？
+- use-package-process-keywords？
+
+#+REVEAL: split
+
+#+BEGIN_SRC emacs-lisp
+(defun use-package-process-keywords (name plist &optional state)
+  (declare (indent 1))
+  (unless (null plist)
+    (let* ((keyword (car plist))
+           (arg (cadr plist))
+           (rest (cddr plist)))
+      (unless (keywordp keyword)
+        (use-package-error (format "%s is not a keyword" keyword)))
+      (let* ((handler (concat "use-package-handler/" (symbol-name keyword)))
+             (handler-sym (intern handler)))
+        (if (functionp handler-sym)
+            (funcall handler-sym name keyword arg rest state)
+          (use-package-error
+           (format "Keyword handler not defined: %s" handler)))))))
+#+END_SRC
+
+- (handler (concat "use-package-handler/" (symbol-name keyword)))？
+
+#+REVEAL: split
+
+#+BEGIN_SRC emacs-lisp
+  (defalias 'use-package-normalize/:config 'use-package-normalize-forms)
+
+  (defun use-package-handler/:config (name _keyword arg rest state)
+    (let* ((body (use-package-process-keywords name rest state))
+           (name-symbol (use-package-as-symbol name)))
+      (use-package-concat
+       (when use-package-compute-statistics
+         `((use-package-statistics-gather :config ',name nil)))
+       (if (or (null arg) (equal arg '(t)))
+           body
+         (use-package-with-elapsed-timer
+             (format "Configuring package %s" name-symbol)
+           (funcall use-package--hush-function :config
+                    (use-package-concat
+                     (use-package-hook-injector
+                      (symbol-name name-symbol) :config arg)
+                     body
+                     (list t)))))
+       (when use-package-compute-statistics
+         `((use-package-statistics-gather :config ',name t))))))
+#+END_SRC
+
+- キーワードの数だけ normalize と handler を定義
+- 当然 defalias の嵐
+** いや、、、
+#+REVEAL_HTML: <div style="height:3em"></div>
+#+REVEAL_HTML: <div style="font-size:5em">
+疲れた
+#+REVEAL_HTML: </div>
+
+** leafの独自性 - <同図像性>
+#+BEGIN_SRC emacs-lisp
+(defmacro leaf (name &rest args)
+  (declare (indent defun))
+  (let* ((leaf--autoload)
+         (args* (leaf-sort-values-plist
+                 (leaf-normalize-plist
+                  (leaf-append-defaults args) 'merge 'eval)))
+         (body (leaf-process-keywords name args*)))
+    (when (or body leaf--autoload)
+      `(progn
+         ,@(mapcar
+            (lambda (elm) `(autoload #',(car elm) ,(cdr elm) nil t))
+            (nreverse leaf--autoload))
+         ,@body))))
+#+END_SRC
+
+- leaf-process-keywords？
+
+#+REVEAL: split
+
+#+BEGIN_SRC emacs-lisp
+(defun leaf-process-keywords (name plist)
+  (when plist
+    (let* ((key   (pop plist))
+           (value (leaf-normarize-args name key (pop plist)))
+           (body  (leaf-process-keywords name plist)))
+      (eval
+       `(let ((name  ',name)
+              (key   ',key)
+              (value ',value)
+              (body  ',body)
+              (rest  ',plist))
+          ,(plist-get (cdr leaf-keywords) key))))))
+
+(defun leaf-normarize-args (name key value)
+  (eval
+   `(let ((name  ',name)
+          (key   ',key)
+          (value ',value))
+      (cond
+       ,@leaf-normarize))))
+#+END_SRC
+
+- (plist-get (cdr leaf-keywords) key)？
+- leaf-normarize？ 変数？
+
+#+REVEAL: split
+
+#+BEGIN_SRC emacs-lisp
+  (defvar leaf-keywords
+    '(:dummy
+      :bind         `(,@(mapcar (lambda (elm) `(bind-keys ,@elm)) value) ,@body)
+      :bind*        `(,@(mapcar (lambda (elm) `(bind-keys* ,@elm)) value) ,@body)
+
+      :pre-setq     `(,@(mapcar (lambda (elm) `(setq ,(car elm) ,(cdr elm))) value) ,@body)
+      :init         `(,@value ,@body)
+      :require      `(,@(mapcar (lambda (elm) `(require ',elm)) value) ,@body)
+      :setq         `(,@(mapcar (lambda (elm) `(setq ,(car elm) ,(cdr elm))) value) ,@body)
+      :setq-default `(,@(mapcar (lambda (elm) `(setq-default ,(car elm) ,(cdr elm))) value) ,@body)
+      :config       `(,@value ,@body)))
+  
+  (defvar leaf-normarize
+    '(((memq key '(:require))
+       (let ((ret (leaf-flatten value)))
+         (if (eq nil (car ret))
+             nil
+           (delete-dups (delq nil (leaf-subst t name ret))))))
+      
+      ((memq key '(:load-path :commands :after :defvar))
+       (delete-dups (delq nil (leaf-flatten value))))
+      
+      ((memq key '(:bind :bind*))
+       (let ((ret) (fn))
+         (setq fn (lambda (elm ret)
+                    (cond
+                     ((leaf-pairp elm)
+#+END_SRC
+
+** 同図像性により
+#+REVEAL_HTML: <div style="height:1.5em"></div>
+#+REVEAL_HTML: <div style="font-size:3em">
+実装を *データ* として記述できた
+#+REVEAL_HTML: </div>
+
+** 実装をデータとして記述するメリット
+- 細々とした条件分岐部分を切り出す
+  - 大きな流れが捉えやすくなる
+- キーワード追加の心理的障壁を減らす
+  - 新しいキーワードとその変換を追加すれば良い
+- パッケージ外からのキーワード追加
+  - 変数へのpushで可能
+  - 関数のアドバイスや再定義による混乱を防ぐ
+
+** 実装をデータとして記述するデメリット
+- バイトコンパイラの恩恵を受けられない
+  - leafはそもそもバイトコンパイル中に動作するので影響は最小限
+
+* cort-test.el
+- 軽量ユニットテストフレームワーク
+  - cort-test.el: 250行 (10%) vs ert.el: 2500行
+- 本質的な行は3行のみ。あとはオプション用の変数定義
+
+#+BEGIN_SRC emacs-lisp
+(defun cort-test-test (test)
+  "Actually execute TEST.  TEST expect (METHOD EXPECT GIVEN).
+Evaluate GIVEN to check it match EXPECT.
+If match, return t, otherwise return nil."
+  (let ((_name  (nth 0 test))
+        (method (nth 1 test))
+        (expect (nth 2 test))
+        (given  (nth 3 test)))
+    (if (eq method :cort-error)
+        (eval
+         `(condition-case err
+              (eval ,given)
+            (,expect t)))
+      (funcall (intern
+                (substring (symbol-name method) 1))
+               (eval given) (eval expect)))))
+#+END_SRC
+
+** テストフレームワークの仕事
+#+REVEAL_HTML: <div style="height:2em"></div>
+#+REVEAL_HTML: <div style="font-size:1.5em">
+#+ATTR_REVEAL: :frag (appear)
+*何かの式/操作* を評価/実行したとき@@html:<br />@@
+*期待する値* と *等しい* かどうか確かめる。
+#+REVEAL_HTML: </div>
+#+REVEAL_HTML: <div style="height:1.5em"></div>
+- 結果を見やすく表示する
+- 失敗した場合、デバッグの援助となる情報を出力する
+
+** cort-deftest
+*テストの宣言* を行ったときにテストを実行してはいけない。
+
+あくまでも *テストの宣言* であり、テストを保存するだけ。
+
+#+BEGIN_SRC emacs-lisp
+(cort-deftest arith
+  '((:= 9   (+ 4 5))
+    (:= -1  (- 4 5))
+    (:= 20  (* 4 5))
+    (:= 0   (/ 4 5))
+    (:= 0.8 (/ 4.0 5))
+    (:= 4   (mod 4 5))))
+#+END_SRC
+
+* seml-mode.el
+- HTML用テンプレートエンジン
+- SEMLは *S-Expression Markup Language* の略
+- Emacs組み込みでHTML \to Sexpは存在したが、逆がない
+  - 作ってしまえ
+
+#+BEGIN_SRC html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <title>sample page</title>
+    <link rel="stylesheet" href="sample1.css"/>
+  </head>
+  <body>
+    <h1>sample</h1>
+    <p>
+      text sample
+    </p>
+  </body>
+</html>
+#+END_SRC
+
+#+BEGIN_SRC seml
+(html ((lang . "en"))
+  (head nil
+    (meta ((charset . "utf-8")))
+    (title nil "sample page")
+    (link ((rel . "stylesheet") (href . "sample1.css"))))
+  (body nil
+    (h1 nil "sample")
+    (p nil "text sample")))
+#+END_SRC
+
 
 * Footnotes
 [fn:1] 東京大学 - [[http://www.jsk.t.u-tokyo.ac.jp/~inamura/lecture/download/20051205_soft3_lisp1.pdf][ソフトウェア第三 講義資料 - Lisp処理系, リスト処理]]
@@ -214,6 +599,5 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
 [fn:3] STUART C. SHAPIRO - [[https://cse.buffalo.edu/~shapiro/Commonlisp/commonLisp.pdf][Common lisp - An Interacive approach]]
 [fn:4] Harold Abelson 他 著 和田 栄一 訳 - [[https://sicp.iijlab.net/fulltext/xcont.html][計算機プログラムの構造と解釈]]
 [fn:5] Richard Stallman 他 著 Ayatakesi 訳 - [[https://ayatakesi.github.io/lispref/24.5/elisp.html#Evaluation][GNU Emacs Lisp Reference Manual]]
-q
 
 
