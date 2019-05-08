@@ -20,11 +20,11 @@
 ** 自己紹介
 - 山下 直哉 (conao3)
 - 学業
-  - 広島大学工学部第2類@@html:<br />@@量子材料科学研究室 (二回目の)4年生
-    - 金や銅の基板に薬品をかけ@@html:<br />@@ナノレベルの計測/評価
+  - 広島大学工学部第2類@@html:<br />@@量子材料科学研究室 (進振り失敗の結果、二回目の)4年生
+    - 金や銅の基板に薬品をかけ、ナノレベルの計測/評価
 - 趣味
   - Emacsのパッケージ開発
-  - 資格（応用情報(AP)/CCNP/情報科教員免許）
+  - 資格取得（応用情報(AP)/CCNP/情報科教員免許）
   - GitHubに草を生やす
 
 ** GitHubの草
@@ -73,7 +73,7 @@ Emacsのために@@html:<br />@@Emacsを使っている
 #+end_notes
 
 ** いろんなパッケージをElispで書いてみて
-#+REVEAL_HTML: <div style="height:2em"></div>
+#+REVEAL_HTML: <div style="height:3em"></div>
 #+REVEAL_HTML: <div style="font-size:2.5em">
 #+ATTR_REVEAL: :frag (appear)
 同図像性ってすごい！！
@@ -90,6 +90,18 @@ Emacsのために@@html:<br />@@Emacsを使っている
 データとプログラムが@@html:<br />@@同じ形式で書ける
 #+REVEAL_HTML: </div>
  
+** 今回の目的
+#+REVEAL_HTML: <div style="height:3em"></div>
+#+REVEAL_HTML: <div style="font-size:2em">
+#+ATTR_REVEAL: :frag (appear)
+俺、いま同図像性使って@@html:<br />@@書いてんなー汗
+#+REVEAL_HTML: </div>
+
+#+REVEAL_HTML: <div style="font-size:1.2em">
+#+ATTR_REVEAL: :frag (appear)
+くらいの +知ったかぶり+ 認識ができるようになる
+#+REVEAL_HTML: </div>
+
 ** evalとbackquote - 初級編
 *eval* と *backquote* の相性は悪魔的
 #+BEGIN_SRC emacs-lisp
@@ -244,6 +256,7 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
 - 新しいキーワードを追加するのが困難
 - あるパッケージだけ違うディストリビューションにできない
 - (init.elをEmacs-22, 23で読み込めない)
+  - 詳しい苦悩は[[https://qiita.com/conao3/items/82abfea7a4c81f946e60][Qiita記事]]を参照
 
 #+BEGIN_NOTES
 主に最初の3つが大きな不満点でした。
@@ -424,6 +437,7 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
 #+REVEAL_HTML: </div>
 
 ** leafの独自性 - <同図像性>
+同図像性によりメイン関数を小さく出来た
 #+BEGIN_SRC emacs-lisp
 (defmacro leaf (name &rest args)
   (declare (indent defun))
@@ -432,11 +446,8 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
                  (leaf-normalize-plist
                   (leaf-append-defaults args) 'merge 'eval)))
          (body (leaf-process-keywords name args*)))
-    (when (or body leaf--autoload)
+    (when body
       `(progn
-         ,@(mapcar
-            (lambda (elm) `(autoload #',(car elm) ,(cdr elm) nil t))
-            (nreverse leaf--autoload))
          ,@body))))
 #+END_SRC
 
@@ -448,23 +459,20 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
 #+BEGIN_SRC emacs-lisp
 (defun leaf-process-keywords (name plist)
   (when plist
-    (let* ((key   (pop plist))
-           (value (leaf-normarize-args name key (pop plist)))
-           (body  (leaf-process-keywords name plist)))
+    (let* ((leaf--name  name)
+           (leaf--key   (pop plist))
+           (leaf--value (leaf-normarize-args leaf--name leaf--key (pop plist)))
+           (leaf--body  (leaf-process-keywords leaf--name plist))
+           (leaf--rest  plist))
       (eval
-       `(let ((name  ',name)
-              (key   ',key)
-              (value ',value)
-              (body  ',body)
-              (rest  ',plist))
-          ,(plist-get (cdr leaf-keywords) key))))))
+       (plist-get (cdr leaf-keywords) leaf--key)))))
 
 (defun leaf-normarize-args (name key value)
-  (eval
-   `(let ((name  ',name)
-          (key   ',key)
-          (value ',value))
-      (cond
+  (let ((leaf--name  name)
+        (leaf--key   key)
+        (leaf--value value))
+    (eval
+     `(cond
        ,@leaf-normarize))))
 #+END_SRC
 #+REVEAL_HTML: </div>
@@ -546,6 +554,10 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
 - 結果を見やすく表示する
 - 失敗した場合、デバッグの援助となる情報を出力する
 
+#+reveal: split
+#+attr_html: :width 700px
+[[./images/cort-test.png]]
+
 ** cort-deftest
 - テストの宣言を行ったときに *テストを実行してはいけない*
 - あくまでも *テストの宣言* であり、テストを保存するのみ
@@ -567,6 +579,8 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
 - Emacs組み込みでHTML \to Sexpは存在したが、逆がない
   - 作ってしまえ
 
+** SEMLファイルの例
+#+REVEAL_HTML: <div style="font-size:0.7em">
 #+BEGIN_SRC html
 <!DOCTYPE html>
 <html lang="en">
@@ -594,7 +608,40 @@ Elispの場合、C言語で実装されている関数はすべてスペシャ�
     (h1 nil "sample")
     (p nil "text sample")))
 #+END_SRC
+#+REVEAL_HTML: </div>
 
+** SEMLの利点 - 同図像性の利用
+#+attr_html: :width 900px
+[[./images/complex-seml.png]]
+
+* まとめ
+#+ATTR_REVEAL: :frag (appear)
+- 同図像性を利用することにより、Lispプログラムは
+  #+ATTR_REVEAL: :frag (appear)
+  - より理解しやすく
+  - より自由に
+  - よりパワフルになる！
+- LispプログラムがLispプログラムである利点を活かす！
+- 今日紹介したパッケージはすべてGitHubで公開
+  #+ATTR_REVEAL: :frag (appear)
+  - ぜひPRをお願いします！
+  - +できたらスターを押して頂けると、励みになります+
+
+** 補足リンク 
+#+REVEAL_HTML: <div style="font-size:0.8em">
+- [[https://github.com/conao3][Github]]
+  - [[https://github.com/conao3/leaf.el][leaf.el]] - Yet another use-package
+  - [[https://github.com/conao3/cort-test.el][cort-test.el]] - Simplify Elisp unit test framework
+  - [[https://github.com/conao3/seml-mode.el][seml-mode.el]] - Major-mode for editing SEML files
+  - [[https://github.com/conao3/feather.el][feather.el]] - Parallel thread modern Emacs package manager
+- [[https://twitter.com/conao_3][Twitter]]
+- 参考資料
+  - 東京大学 - [[http://www.jsk.t.u-tokyo.ac.jp/~inamura/lecture/download/20051205_soft3_lisp1.pdf][ソフトウェア第三 講義資料 - Lisp処理系, リスト処理]]
+  - Paren-holic - [[https://booth.pm/ja/items/1317263][3つのLisp 3つの世界]]
+  - STUART C. SHAPIRO - [[https://cse.buffalo.edu/~shapiro/Commonlisp/commonLisp.pdf][Common lisp - An Interacive approach]]
+  - Harold Abelson 他 著 和田 栄一 訳 - [[https://sicp.iijlab.net/fulltext/xcont.html][計算機プログラムの構造と解釈]]
+  - Richard Stallman 他 著 Ayatakesi 訳 - [[https://ayatakesi.github.io/lispref/24.5/elisp.html#Evaluation][GNU Emacs Lisp Reference Manual]]
+#+REVEAL_HTML: </div>
 
 * Footnotes
 [fn:1] 東京大学 - [[http://www.jsk.t.u-tokyo.ac.jp/~inamura/lecture/download/20051205_soft3_lisp1.pdf][ソフトウェア第三 講義資料 - Lisp処理系, リスト処理]]
