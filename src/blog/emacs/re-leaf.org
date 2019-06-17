@@ -1,0 +1,7 @@
+#+title: 続・leaf.elを使おう
+#+author: conao3
+#+date: <2019-05-31 Fri>
+
+* leafとは
+use-packageはinit.el記述において、素晴らしいブレイクスルーを起こしました。
+パッケージ
