@@ -6,7 +6,9 @@ sitemap.inc
 
 # export files
 index.html
-/src/
+/src/**/*
+
+!*/
 !/src/**/*.org
 
 !/src/**/*.png
