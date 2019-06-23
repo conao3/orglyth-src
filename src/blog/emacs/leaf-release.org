@@ -1,0 +1,1665 @@
+#+author: conao3
+#+title: [正式リリース]leaf.elでinit.elをクリーンにする
+
+私は去年の[[https://github.com/conao3/dotfiles/commit/fd06cea5dd040ec1fb34225a3f3202200e00801e][8月]]から.emacs.d/init.elの大改革を行っており、その副産物としての成果物を[[https://qiita.com/advent-calendar/2018/emacs][Emacs Advent Calendar 2018]]や[[https://tokyo-emacs.connpass.com/event/128038/][東京Emacs勉強会 端午の節句]]などで共有させて頂いていました。
+
+私の関わっているパッケージは多数ありますが、一番力を入れている ~leaf.el~ がやっとMELPAに仲間入りすることができたので、ダイレクトマーケティング記事を書く次第です。
+
+* 背景
+Emacsを使っている方ならば、自分のinit.elに採用するかはさておき、jwiegleyさんの[[https://github.com/jwiegley/use-package][use-package]]というパッケージの存在を知っていらっしゃると思います。
+
+Qiitaでは @kai2nenobu さんの「[[https://qiita.com/kai2nenobu/items/5dfae3767514584f5220][use-packageで可読性の高いinit.elを書く]]」というとても分かりやすい記事がありますし、
+るびきちさんも「[[http://emacs.rubikitch.com/use-package-2/][use-package.el: Emacsの世界的権威が行っている最先端ラクラクinit.el整理術]]」という記事を書いていらっしゃいます。
+
+私もこれらの記事を見ながらinit.elを書きなおしたのですが、init.elは個性の塊であるがゆえに、次第にjwiegleyさんが想定していない方法で ~use-package~ を使うようになってしまいました。
+そして ~use-package~ に自分が欲しいキーワードを自由に追加したいと思うようになりました。
+
+ ~use-package~ は素晴らしいパッケージですが、多くのコントリビューターを受け入れたことによるか、そもそもの設計の問題か、内部は複雑怪奇になっており、単純に読むだけでも困難を極めました。
+
+そのため私が拡張したいように拡張するために、そして書きたいようにinit.elを書くために新しい ~use-package~ を作る必要がありました。
+
+まぁ後から動機を分析してみたらこういう風な動機があった。と思うだけで、開発当時はOn Lispの「[[http://www.asahi-net.or.jp/~kc7k-nd/onlispjhtml/macros.html][マクロ]]」の項を読んで、 ~use-package~ に対して単なる技術的な興味を持っただけだったのかもしれません。
+
+とにかく私は ~leaf~ を作ることによりlispの力の片鱗を感じとれ、Emacs-jpの勉強会で登壇できるくらいのノウハウを得ることができました。
+Emacs-lisp、そしてLispの演習としては、とても良い題材だったのではないかなと振り返っています。
+
+なお、記事中で使うために、次のユーティリティーマクロを定義します。
+
+#+begin_src emacs-lisp
+  (prog1 "conao3 utility"
+    (defmacro p (form)
+      "Output pretty `macroexpand-1'ed given FORM."
+      `(progn
+         (pp (macroexpand-1 ',form))
+         nil))
+
+    (defmacro po (form)
+      "Output pretty given FORM."
+      `(progn
+         (pp ,form)
+         nil))
+
+    (defmacro pl (form &optional stream)
+      "Output list"
+      `(progn
+         (with-temp-buffer
+           (insert (prin1-to-string ,form))
+           (goto-char (point-min))
+           (forward-char)
+           (ignore-errors
+             (while t (forward-sexp) (insert "\n")))
+           (delete-char -1)
+           (princ (buffer-substring-no-properties (point-min) (point-max))
+                  (or ,stream standard-output))
+           (princ "\n"))
+         nil)))
+#+end_src
+
+* use-packageの問題点
+ ~use-package~ を使っていて、ストレスだった点をつらつら書きます。[[https://qiita.com/conao3/items/82abfea7a4c81f946e60#use-package%25E3%2581%25AE%25E3%2581%25AB%25E4%25BB%2598%25E9%259A%258F%25E3%2581%2599%25E3%2582%258B%25E5%2595%258F%25E9%25A1%258C%25E7%2582%25B9][年末のAdvent Calendar]]にも少し書いたのですが、それに加えて、話の流れとしてもう少し書きます。
+
+** use-packageが想定していなかった使い方
+ ~use-package~ は「パッケージ設定」のためのパッケージです。そのため、「パッケージのインストールとその設定」を考えるel-getとは一線を画しています。
+そのため「el-getでは。。」という[[https://github.com/jwiegley/use-package/issues/470][issueは1レスで閉じられ]]ます。
+もちろんjwiegleyさんの方針は理解できます。OSSでは風見鶏な運営をするとすぐ破綻してしまうので、ばっさり閉じられたことに意見はありません。
+
+さて、 ~leaf~ は一体どういう方針なのかというと、 ~leaf~ は「パッケージ設定フォルダ」を提供するためのパッケージです。
+
+~leaf~ のネーミングはそもそもそういう使い方を想定しています。ひとつひとつの「葉」が集まってEmacs上に「大樹」を作るイメージです。
+「葉」は複数の「葉」によって構成されていても良く、それは平易に言い換えれば「パッケージ設定フォルダ」として機能します。
+
+Spacemacsは使っていないのですが、言語毎、目的毎に ~Layer~ が管理されており、それを有効にするか無効にするかによって典型的な設定を行うという薄い知識があります。
+ ~leaf~ はひとつの「葉」に複数のパッケージの設定を内包することが出来ることから、Spacemacsのそれと同様な使い方が可能です。
+
+なぜ一つの ~use-package~ に複数のパッケージの設定を書くようになったのかというと、その書き方がS式の折り畳みをするパッケージとの相性がとても良いからです。
+その話については年末のAdvent Calendarで[[https://qiita.com/conao3/items/82abfea7a4c81f946e60#use-package%25E3%2581%25AB%25E3%2581%25A4%25E3%2581%2584%25E3%2581%25A6][leafの記事の一部]]として書いています。
+
+また条件分岐キーワードとの相性もとても良くなります。
+例えば ~:disabled~ や ~:when~ キーワードで、ある親パッケージを無効にすると、そのパッケージに依存する子パッケージも同時に無効にすることができます。
+
+しかし ~use-package~ は本来1パッケージ-1 ~use-package~ が想定されているため、 ~use-package~ を単に設定フォルダとして使おうと思うと、逐一 ~:no-require~ キーワードが必要になります。
+キーワードを省略した時、 ~require~ に変換されるからです。
+
+一方 ~leaf~ ではそのようなキーワードを別途指定する必要はありません。キーワードを省略した場合は空の ~prog1~ に変換されるからです。
+そのため次のような設定を簡単に書くことができます。
+
+#+begin_src emacs-lisp
+  (leaf *minor-mode
+    :config
+    (leaf posframe
+      :ensure t
+      :when (version<= "26.1" emacs-version)
+      :when window-system
+      :config
+      (leaf ivy-posframe
+        :doc "Using posframe to show Ivy"
+        :after ivy
+        :ensure t
+        :custom ((ivy-posframe-mode . t)
+                 (ivy-posframe-height-alist . '((swiper . 30) (t . 40)))
+                 (ivy-posframe-display-functions-alist
+                  . '((swiper . nil) (t . ivy-posframe-display-at-frame-center)))
+                 (ivy-posframe-parameters . '((left-fringe . 10)))))
+
+      (leaf company-posframe
+        :doc "Use a posframe as company candidate menu"
+        :ensure t
+        :after company
+        :custom ((company-posframe-mode . t)))
+
+      (leaf flycheck-posframe
+        :ensure t
+        :after flycheck
+        :custom ((flycheck-posframe-mode . t)))
+
+      (leaf which-key-posframe
+        :ensure t
+        :after which-key
+        :custom ((which-key-posframe-mode . t)))
+
+      (leaf ddskk-posframe
+        :doc "Show Henkan tooltip for ddskk via posframe"
+        :after skk
+        :el-get conao3/ddskk-posframe.el
+        :custom ((ddskk-posframe-mode . t))))
+
+    ;; other minor-mode packages...
+    )
+#+end_src
+
+これは私のinit.elに実際に存在する設定です。
+~*minor-mode~ という ~leaf~ ブロックでくくることによって、折り畳みパッケージの恩恵が受けやすくなり、やろうと思えばマイナーモードを全オフにしたEmacsを立ち上げることも容易です。
+
+また、 ~posframe~ はEmacs-26に依存していますが、その条件が満されない場合、
+同時に ~ivy-posframe~, ~company-posframe~, ~flycheck-posframe~, ~which-keyposfrme~, ~ddskk-posframe~ の設定を無視させることが出来るようになります。
+
+このようにパッケージ設定の階層構造を表現することがとても簡単にできます。
+
+本来、エディタの設定にはあまり時間をかけられるものではありません。
+パッケージの設定を階層管理することによって、設定したパッケージが全体においてどんな位置付けなのか、素早く理解し編集することが可能になります。
+
+** use-packageのキーワード解釈の非統一性
+例えばこれらのキーワードは不釣り合いです。
+  - ~:defer~ キーワードは「パッケージシンボル」か「それのリスト」 が受け取れるが、 ~:ensure~ キーワードはリストは受け取れない。
+  - ~:if~, ~:when~, ~:unless~ は真偽値と解釈され得るS式を期待するが、 ~:disabled~ キーワードは引数なしで活性化する。
+  - ~:hook~ や ~:bind~ は「ドット対」と「ドット対のリスト」を期待するが、 ~:custom~ キーワードは通常のリストを期待する。
+
+具体的には次のような混乱があります。
+
+#+begin_src emacs-lisp
+  (p (use-package ddskk-posframe
+       :after posframe ddskk))            ; シンボル指定ok
+  ;; => (eval-after-load 'ddskk
+  ;;      '(eval-after-load 'posframe
+  ;;         '(require 'ddskk-posframe nil nil)))
+
+  (p (use-package ddskk-posframe
+       :after (posframe ddskk)))          ; リスト指定ok
+  ;; => (eval-after-load 'ddskk
+  ;;      '(eval-after-load 'posframe
+  ;;         '(require 'ddskk-posframe nil nil)))
+  ;;    
+
+  (p (use-package ddskk-posframe
+       :ensure posframe))                 ; シンボル一つなら処理できる
+  ;; => (progn
+  ;;      (use-package-ensure-elpa 'ddskk-posframe '(posframe) 'nil)
+  ;;      (require 'ddskk-posframe nil nil))
+
+  (p (use-package ddskk-posframe
+       :ensure posframe ddskk))           ; シンボルが2つ以上だとエラー
+  ;; => Debugger entered--Lisp error: (error "use-package: :ensure wants exactly one argument")
+
+  (p (use-package ddskk-posframe
+       :ensure (posframe ddskk)))         ; リスト指定でもエラー
+  ;; => Debugger entered--Lisp error: (error "use-package: :ensure wants an optional package name (an unquoted symbol name), or (<symbol> :pin <string>)")
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (p (use-package posframe
+       :when (version<= "26.1" emacs-version) ; あらゆるS式を処理できる
+       :config (use-package ivy-posframe)))
+  ;; => (when (version<= "26.1" emacs-version)
+  ;;      (require 'posframe nil nil)
+  ;;      (require 'ivy-posframe nil nil)
+  ;;      t)
+
+  (p (use-package posframe
+       :when
+       window-system
+       (version<= "26.1" emacs-version)       ; 受け取れるS式は一つのみ
+       :config (use-package ivy-posframe)))
+  ;; (error "use-package: :if wants exactly one argument")
+
+  (p (use-package posframe
+       :disabled                              ; キーワードを書いただけで活性化
+       :config (use-package ivy-posframe)))
+  ;; => nil
+
+  (p (use-package posframe
+       :disabled t                            ; tだと活性化
+       :config (use-package ivy-posframe)))
+  ;; => nil
+
+  (p (use-package posframe
+       :disabled nil                          ; nilでも活性化
+       :config (use-package ivy-posframe)))
+  ;; => nil
+
+  (p (use-package posframe
+       :disabled (version<= "26.1" emacs-version) ; 指定された要素は無視される
+       :config (use-package ivy-posframe)))
+  ;; => nil
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (p (use-package org
+       :bind (("M-o o c" . org-capture)
+              ("M-o o a" . org-agenda)
+              ("M-o o l" . org-store-link)))) ; ドット対のリストを与える
+  ;; => (progn
+  ;;      (unless (fboundp 'org-capture) (autoload #'org-capture "org" nil t))
+  ;;      (unless (fboundp 'org-agenda) (autoload #'org-agenda "org" nil t))
+  ;;      (unless (fboundp 'org-store-link) (autoload #'org-store-link "org" nil t))
+  ;;      (bind-keys :package org
+  ;;                 ("M-o o c" . org-capture)
+  ;;                 ("M-o o a" . org-agenda)
+  ;;                 ("M-o o l" . org-store-link)))
+
+  (p (use-package real-auto-save
+       :hook (find-file . real-auto-save-mode))) ; ドット対を与える
+  ;; => (progn
+  ;;     (unless (fboundp 'real-auto-save-mode) (autoload #'real-auto-save-mode "real-auto-save" nil t))
+  ;;     (add-hook 'find-file-hook #'real-auto-save-mode))
+
+  (p (use-package real-auto-save
+       :custom ((real-auto-save-interval . 0.3)))) ; ドット対を与えるとエラー
+  ;; => Debugger entered--Lisp error: (wrong-type-argument listp 0.3)
+
+  (p (use-package real-auto-save
+       :custom ((real-auto-save-interval 0.3))))   ; リストを与える必要がある
+  ;; => (progn
+  ;;      (customize-set-variable 'real-auto-save-interval 0.3 "Customized with use-package real-auto-save")
+  ;;      (require 'real-auto-save nil nil))
+#+end_src
+
+このように ~use-package~ はキーワードごとに受理できる形式が異なっており、キーワードごとにどんな形式で与えるか考える必要があります。
+
+その点、 ~leaf~ は注意深くハンドラーと受理形式を設計しているため、キーワードごとに余計な考慮をしなくて済みます。
+
+そのため ~leaf~ のキーワードは全体として調和を保ち、整然とinit.elを記述できます。
+
+#+begin_src emacs-lisp
+  (p (leaf ddskk-posframe
+       :after posframe ddskk              ; 複数シンボル指定ok
+       :config (ddskk-posframe-init)))
+  ;; => (prog1 'ddskk-posframe
+  ;;      (eval-after-load 'ddskk
+  ;;        '(eval-after-load 'posframe
+  ;;           '(progn
+  ;;              (ddskk-posframe-init)))))
+
+  (p (leaf ddskk-posframe
+       :after (posframe ddskk)            ; リスト指定ok
+       :config (ddskk-posframe-init)))
+  ;; => (prog1 'ddskk-posframe
+  ;;      (eval-after-load 'ddskk
+  ;;        '(eval-after-load 'posframe
+  ;;           '(progn
+  ;;              (ddskk-posframe-init)))))
+
+  (p (leaf ddskk-posframe
+       :ensure posframe))                 ; シンボル指定ok
+  ;; => (prog1 'ddskk-posframe
+  ;;      (leaf-handler-package ddskk-posframe posframe nil))
+
+  (p (leaf ddskk-posframe
+       :ensure posframe ddskk))           ; 複数シンボルok
+  ;; => (prog1 'ddskk-posframe
+  ;;      (leaf-handler-package ddskk-posframe posframe nil)
+  ;;      (leaf-handler-package ddskk-posframe ddskk nil))
+
+  (p (leaf ddskk-posframe
+       :ensure (posframe ddskk)))         ; リスト指定でもok
+  ;; => (prog1 'ddskk-posframe
+  ;;      (leaf-handler-package ddskk-posframe posframe nil)
+  ;;      (leaf-handler-package ddskk-posframe ddskk nil))
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (p (leaf posframe
+       :when (version<= "26.1" emacs-version) ; あらゆるS式を処理できる
+       :config (leaf ivy-posframe)))
+  ;; => (prog1 'posframe
+  ;;      (when (version<= "26.1" emacs-version)
+  ;;        (leaf ivy-posframe)))
+
+  (p (leaf posframe
+       :when
+       window-system
+       (version<= "26.1" emacs-version)       ; 複数のS式を処理できる
+       :config (leaf ivy-posframe)))
+  ;; => (prog1 'posframe
+  ;;      (when (and window-system
+  ;;               (version<= "26.1" emacs-version))
+  ;;        (leaf ivy-posframe)))
+
+  (p (leaf posframe
+       :disabled                              ; キーワードを書いただけで活性化しない
+       :config (leaf ivy-posframe)))
+  ;; => (prog1 'posframe
+  ;;      (leaf ivy-posframe))
+
+  (p (leaf posframe
+       :disabled t                            ; tだと活性化
+       :config (leaf ivy-posframe)))
+  ;; => (prog1 'posframe)
+
+  (p (leaf posframe
+       :disabled nil                          ; nilだときちんと非活性化
+       :config (leaf ivy-posframe)))
+  ;; => (prog1 'posframe
+  ;;      (leaf ivy-posframe))
+
+  (p (leaf posframe
+       :disabled (version<= "26.1" emacs-version) ; 指定された要素は評価され、きちんと活性化
+       :config (leaf ivy-posframe)))
+  ;; => (prog1 'posframe)
+
+  (p (leaf posframe
+       :disabled (version<= "30.1" emacs-version) ; 指定された要素は評価され、きちんと非活性化
+       :config (leaf ivy-posframe)))
+  ;; => (prog1 'posframe
+  ;;      (leaf ivy-posframe))
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (p (leaf org
+       :bind (("M-o o c" . org-capture)
+              ("M-o o a" . org-agenda)
+              ("M-o o l" . org-store-link))))         ; ドット対を与える
+  ;; => (prog1 'org
+  ;;      (autoload #'org-capture "org" nil t)
+  ;;      (autoload #'org-agenda "org" nil t)
+  ;;      (autoload #'org-store-link "org" nil t)
+  ;;      (leaf-keys
+  ;;       (("M-o o c" . org-capture)
+  ;;        ("M-o o a" . org-agenda)
+  ;;        ("M-o o l" . org-store-link))))
+
+  (p (leaf real-auto-save
+       :hook (find-file-hook . real-auto-save-mode))) ; ドット対を与える
+  ;; => (prog1 'real-auto-save
+  ;;      (autoload #'real-auto-save-mode "real-auto-save" nil t)
+  ;;      (add-hook 'find-file-hook #'real-auto-save-mode))
+
+  (p (leaf real-auto-save
+       :custom ((real-auto-save-interval . 0.3))))    ; ドット対を与える
+  ;; => (prog1 'real-auto-save
+  ;;      (custom-set-variables
+  ;;       '(real-auto-save-interval 0.3 "Customized with leaf in real-auto-save block")))
+#+end_src
+
+** :bindキーワードのインデント
+ ~use-package~ を使っていろいろなパッケージの設定を行うと、ある種類のパッケージで ~:bind~ のインデントが壊れてしまうことに気づくと思います。
+それはグローバルに割り当てがなく、特定のキーマップへの割り当てのみが存在する場合です。
+
+ ~leaf~ はその問題が起こることが分かっていたので、インデントが壊れない受理形式を設計することができました。
+
+マイナーモードの指定にはシンボルとキーワードのどちらでも使うことができます。
+シンボルは定義ジャンプが可能で、キーワードは視認性に優れています。これは好みでユーザーに選んでもらえればと思います。
+
+#+begin_src emacs-lisp
+  (use-package term
+    :bind (("C-c t" . term)
+           :map term-mode-map
+           ("M-p" . term-send-up)         ; good indent
+           ("M-n" . term-send-down)))
+
+  (use-package term
+    :bind (:map term-mode-map
+                ("M-p" . term-send-up)    ; indent broken
+                ("M-n" . term-send-down)))
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (leaf term
+    :bind (("C-c t" . term)
+           (term-mode-map
+            ("M-p" . term-send-up)        ; good indent
+            ("M-n" . term-send-down))))
+
+  (leaf term
+    :bind ((term-mode-map
+            ("M-p" . term-send-up)        ; good indent
+            ("M-n" . term-send-down))))
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (leaf term
+    :bind (("C-c t" . term)
+           (:term-mode-map                ; キーワードで指定しても良い
+            ("M-p" . term-send-up)
+            ("M-n" . term-send-down))))
+
+  (leaf term
+    :bind ((:term-mode-map
+            ("M-p" . term-send-up)
+            ("M-n" . term-send-down))))
+#+end_src
+
+~use-package~ の形式のさらに悪い点は「どこまでがマイナーモードの割り当てか分かりづらい」ことです。
+キーマップへの割り当てが一つなら許容できますが、2つ以上になると読み辛くなります。
+
+これは ~:map~ が暗黙的な影響範囲を持っているからです。
+対してleafの形式はリストで指定するため、影響範囲は明白ですし、キーマップへの割り当ての後にグローバルマップへの割り当てが可能です。
+
+#+begin_src emacs-lisp
+  (p (use-package smartparens
+       :bind (("C-c s" . smartparens-mode)
+              :map smartparens-mode-map
+              ;; basic (fbnp-ae)
+              ("C-M-f" . sp-forward-sexp)
+              ("C-M-b" . sp-backward-sexp)
+              ("C-M-n" . sp-next-sexp)
+              ("C-M-p" . sp-previous-sexp)
+              ("C-M-a" . sp-beginning-of-sexp)
+              ("C-M-e" . sp-end-of-sexp)             ; smartparens-mode-mapへの割り当てはここまで?
+              :map lisp-mode
+              :package lisp-mode
+              ("C-c s" . smartparens-strict-mode))))
+  ;; => (progn
+  ;;      (unless (fboundp 'smartparens-mode) (autoload #'smartparens-mode "smartparens" nil t))
+  ;;      (unless (fboundp 'sp-forward-sexp) (autoload #'sp-forward-sexp "smartparens" nil t))
+  ;;      (unless (fboundp 'sp-backward-sexp) (autoload #'sp-backward-sexp "smartparens" nil t))
+  ;;      (unless (fboundp 'sp-next-sexp) (autoload #'sp-next-sexp "smartparens" nil t))
+  ;;      (unless (fboundp 'sp-previous-sexp) (autoload #'sp-previous-sexp "smartparens" nil t))
+  ;;      (unless (fboundp 'sp-beginning-of-sexp) (autoload #'sp-beginning-of-sexp "smartparens" nil t))
+  ;;      (unless (fboundp 'sp-end-of-sexp) (autoload #'sp-end-of-sexp "smartparens" nil t))
+  ;;      (unless (fboundp 'smartparens-strict-mode) (autoload #'smartparens-strict-mode "smartparens" nil t))
+  ;;      (bind-keys :package smartparens
+  ;;                 ("C-c s" . smartparens-mode)
+  ;;                 :map smartparens-mode-map
+  ;;                 ("C-M-f" . sp-forward-sexp)
+  ;;                 ("C-M-b" . sp-backward-sexp)
+  ;;                 ("C-M-n" . sp-next-sexp)
+  ;;                 ("C-M-p" . sp-previous-sexp)
+  ;;                 ("C-M-a" . sp-beginning-of-sexp)
+  ;;                 ("C-M-e" . sp-end-of-sexp)
+  ;;                 :map lisp-mode :package lisp-mode
+  ;;                 ("C-c s" . smartparens-strict-mode)))
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (p (leaf smartparens
+       :bind (("C-c s" . smartparens-mode)             ; global-mapへの割り当て
+              (:smartparens-mode-map                   ; smartparens-mode-mapへの割り当ての開始
+               ;; basic (fbnp-ae)
+               ("C-M-f" . sp-forward-sexp)
+               ("C-M-b" . sp-backward-sexp)
+               ("C-M-n" . sp-next-sexp)
+               ("C-M-p" . sp-previous-sexp)
+               ("C-M-a" . sp-beginning-of-sexp)
+               ("C-M-e" . sp-end-of-sexp))
+              (:lisp-mode-map                          ; lisp-mode-mapへの割り当ての開始
+               :pacakge lisp-mode
+               ("C-c s" . smartparens-strict-mode)))))
+  ;; => (prog1 'smartparens
+  ;;      (autoload #'smartparens-mode "smartparens" nil t)
+  ;;      (autoload #'sp-forward-sexp "smartparens" nil t)
+  ;;      (autoload #'sp-backward-sexp "smartparens" nil t)
+  ;;      (autoload #'sp-next-sexp "smartparens" nil t)
+  ;;      (autoload #'sp-previous-sexp "smartparens" nil t)
+  ;;      (autoload #'sp-beginning-of-sexp "smartparens" nil t)
+  ;;      (autoload #'sp-end-of-sexp "smartparens" nil t)
+  ;;      (autoload #'smartparens-strict-mode "smartparens" nil t)
+  ;;      (leaf-keys
+  ;;       (("C-c s" . smartparens-mode)
+  ;;        (:smartparens-mode-map :package smartparens
+  ;;                               ("C-M-f" . sp-forward-sexp)
+  ;;                               ("C-M-b" . sp-backward-sexp)
+  ;;                               ("C-M-n" . sp-next-sexp)
+  ;;                               ("C-M-p" . sp-previous-sexp)
+  ;;                               ("C-M-a" . sp-beginning-of-sexp)
+  ;;                               ("C-M-e" . sp-end-of-sexp))
+  ;;        (:lisp-mode :package smartparens
+  ;;                    ("C-c s" . smartparens-strict-mode)))))
+#+end_src
+
+* leaf.elとは
+Yet another use-packageです。スクラッチから書きなおし、内部構造を完全に刷新することによって ~use-package~ の使い勝手をそのままに、高い柔軟性と拡張性を備えています。
+
+典型的な例については ~use-package~ と同様に使うことができます。
+しかし ~use-package~ を使っていてストレスに感じた点は修正しているので、その点は逆に移行を考える際は注意する必要がある点になります。
+
+** ダウンロード・インストール
+ここまで読んでいて頂いて、未だダウンロードコードすら載せていないことに軽く戦慄するのですが、私が推奨しているインストールコードを次に示します。
+
+#+begin_src emacs-lisp
+  (prog1 "prepare leaf"
+    (prog1 "package"
+      (custom-set-variables
+       '(package-archives '(("org"   . "https://orgmode.org/elpa/")
+                            ("melpa" . "https://melpa.org/packages/")
+                            ("gnu"   . "https://elpa.gnu.org/packages/"))))
+      (package-initialize))
+
+    (prog1 "leaf"
+      (unless (package-installed-p 'leaf)
+        (unless (assoc 'leaf package-archive-contents)
+          (package-refresh-contents))
+        (condition-case err
+            (package-install 'leaf)
+          (error
+           (package-refresh-contents)       ; renew local melpa cache if fail
+           (package-install 'leaf))))
+
+      (leaf leaf-keywords
+        :ensure t
+        :config (leaf-keywords-init)))
+
+    (prog1 "optional packages for leaf-keywords"
+      ;; optional packages if you want to use :hydra, :el-get,,,
+      (leaf hydra :ensure t)
+      (leaf el-get :ensure t
+        :custom ((el-get-git-shallow-clone  . t)))))
+#+end_src
+
+これをinit.elの冒頭に書いて、まず ~leaf~ をロードします。
+ ~leaf~ の文法に慣れた今となっては、冗長すぎて嫌気がさすのですが、もちろん ~leaf~ を読み込む前には ~leaf~ を使うことはできません。
+
+~prog1~ は設定のフォルダ分けの意味で書いてあります。無い方が良ければ削除しても構いません。
+
+このブロックの後であれば、自由に ~leaf~ のパワフルなパワーを使ってパッケージの設定を書くことができるようになります。
+
+** 使い方
+leafの[[https://github.com/conao3/leaf.el][README]]は ~leaf~ のtestファイルから参考になるテストケースを抜き出したものです。
+「テストファイルを見た方が早い」というのは私の持論ですがテストケースであるがゆえに全ての受理形式が書かれているので、かえってどう書けばいいのか困惑するかもしれません。
+
+ ~leaf~ がいろいろな形式の引数を受け取れるとはいえ、経験から言える一定の「型」のようなものは存在します。
+
+この記事ではその典型的な引数の形式について書きます。
+
+しかし、例示にはやはりテストケースを使います。拙作の[[https://github.com/conao3/cort-test.el][テストフレームワーク]]が受理する以下の形式を使います。
+マクロ展開の結果、 ~FORM~ に書かれたS式が ~EXPECT~ の位置に書かれたS式と一致することを期待します。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand TESTCASE-NAME
+    '((FORM             ; will be expand by `macroexpand-1'
+       EXPECT)          ; expect FORM's expansion will be EXPECT (test by `equal')
+
+      (FORM
+       EXPECT)
+
+      ...))
+
+  (cort-deftest-with-macroexpand-let TESTCASE-NAME
+      LETFORM
+    '((FORM             ; will be expand by `macroexpand-1' in LETFORM
+       EXPECT)          ; expect FORM's expansion will be EXPECT (test by `equal')
+
+      (FORM
+       EXPECT)
+
+      ...))
+#+end_src
+
+また、簡単のために、 ~leaf~ 全体を ~leafブロック~, leafブロックの名前を ~leaf--name~, leafブロック全体の引数を ~leaf--raw~ と呼ぶことにします。
+
+#+begin_src emacs-lisp 
+  (leaf leaf--name
+    leaf--raw)
+#+end_src
+
+** 基本的なキーワード
+*** none
+ ~leaf~ は ~use-package~  *とは違って、* キーワードを全く指定しなかった場合、 ~require~ *ではなく* 空の ~prog1~ に変換します。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/none
+    '(((leaf leaf)
+       (prog1 'leaf))))
+#+end_src
+
+つまり、leaf--nameはleaf--nameを省略された引数のデフォルト値として使うキーワード(後述)を使わない限り、自由につけていいということです。
+
+しかし無用のトラブルを避けるために、単に ~leaf~ をまとめるためだけの ~leaf~ の名前はアスタリスク ~*~ を付与し、 ~:config~ キーワードのみを使うようにしたほうが良いと思います。
+
+以下の ~*grep-tools~ はパッケージの設定をまとめるだけの ~メタleaf~ とも呼ぶべき、leafブロックを作っています。
+そのためアスタリスクを前置し、 ~:config~ キーワードのみを使用しています。
+
+一方、leafブロック ~ag~ は子の ~leaf~ を持っていますが、これは単なる親子関係で、 ~ag~ というパッケージが実際に存在しているため、アスタリスクは付与していません。
+ 
+#+begin_src emacs-lisp 
+  (leaf *grep-tools
+      :config
+      (leaf wgrep
+        :ensure t
+        :custom ((wgrep-enable-key . "e")
+                 (wgrep-auto-save-buffer . t)
+                 (wgrep-change-readonly-file . t)))
+
+      (leaf ag
+        :ensure t
+        :custom ((ag-highligh-search . t)
+                 (ag-reuse-buffers . t)
+                 (ag-reuse-window . t))
+        ;; :bind (("M-s a" . ag-project))
+        :config
+        (leaf wgrep-ag
+          :ensure t
+          :hook ((ag-mode-hook . wgrep-ag-setup))))
+
+      (leaf migemo
+        :disabled t
+        :doc "Japanese incremental search through dynamic pattern expansion"
+        :when (executable-find "cmigemo")
+        :commands migemo-init
+        :config
+        (setq migemo-command (executable-find "cmigemo"))
+        (autoload 'migemo-init "migemo" nil t)
+        (migemo-init)))
+#+end_src
+
+*** :require
+さて、 ~use-package~ ではキーワードを指定しないことをもって ~require~ 文に変換していましたが、 ~leaf~ はメタleafを簡単に作るためにデフォルトでは ~require~ 文を生成しません。
+
+現代のEmacsパッケージ界隈は「[[https://github.com/melpa/melpa/blob/master/CONTRIBUTING.org][善いパッケージ作法]]」がきちんと広まって、ユーザーが ~require~ を実行しなければいけない場面はまれです。([[https://qiita.com/tadsan/items/431899f76f3765892abd#1-require-feature][参考]])
+
+そういう事情もあって、 ~leaf~ はデフォルトでは ~require~ を生成しませんが、例えば開発者が設定のプロトタイプを提供してくれている場合はユーザーが ~require~ を実行する必要があります。
+
+ ~leaf~ では ~require~ 文を生成させるために ~:require~ キーワードを使う必要があります。
+これは ~use-package~ において ~require~ 文を生成しないように ~:no-require~ キーワードを使用することと全く逆です。
+ 
+なお、 ~t~ を指定した場合はleaf--nameを ~require~ します。
+複数のパッケージを ~require~ したい場合は、単にシンボルを書き連ねていけば良いです。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/require
+    '(((leaf cort-test
+         :load-path `,(locate-user-emacs-file "site-lisp/cort-test.el")
+         :require t)
+       (prog1 'cort-test
+         (add-to-list 'load-path "~/.emacs.d/local/26.2/site-lisp/cort-test.el")
+         (require 'cort-test)))
+
+      ((leaf smartparens
+         :doc "Automatic insertion, wrapping and  navigation with user defined pairs"
+         :url "https://github.com/Fuco1/smartparens/wiki/Working-with-expressions"
+         :url "https://github.com/Fuco1/smartparens/wiki/Tips-and-tricks"
+         :when window-system
+         :ensure t
+         :require smartparens-config)
+       (prog1 'smartparens
+         (when window-system
+           (leaf-handler-package smartparens smartparens nil)
+           (require 'smartparens-config))))
+
+      ((leaf skk
+         :ensure ddskk
+         :require t skk-study skk-hint
+         :bind (("C-x j" . skk-auto-fill-mode)))
+       (prog1 'skk
+         (autoload (function skk-auto-fill-mode) "skk" nil t)
+         (leaf-handler-package skk ddskk nil)
+         (leaf-keys (("C-x j" . skk-auto-fill-mode)))
+         (eval-after-load 'skk
+           '(progn
+              (require 'skk)
+              (require 'skk-study)
+              (require 'skk-hint)))))))
+#+end_src
+
+*** :ensure, :package, :el-get, :straight
+ ~use-package~ と同様に ~:ensure~ キーワードを使って、Emacs付属のパッケージマネージャ ~package.el~ を用いてパッケージをインストールすることができます。
+
+~:require~ と同じように ~t~ はleaf--nameと解釈し、シンボルが与えられた場合、そのパッケージをインストールします。
+個人的には使いどころが分かりませんが、複数のシンボルも受理でき、それぞれをインストールできます。(ただ、依存関係はパッケージマネージャが解決してくれるので、本当に使いどころが分からない。)
+ 
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/package
+    '(((leaf treemacs
+         :when (version<= "25.2" emacs-version)
+         :ensure t)
+       (prog1 'treemacs
+         (when (version<= "25.2" emacs-version)
+           (leaf-handler-package treemacs treemacs nil))))
+
+      ((leaf skk
+           :ensure ddskk
+           :require t skk-study skk-hint
+           :bind (("C-x j" . skk-auto-fill-mode)))
+         (prog1 'skk
+           (autoload (function skk-auto-fill-mode) "skk" nil t)
+           (leaf-handler-package skk ddskk nil)
+           (leaf-keys (("C-x j" . skk-auto-fill-mode)))
+           (eval-after-load 'skk
+             '(progn
+                (require 'skk)
+                (require 'skk-study)
+                (require 'skk-hint)))))
+
+      ((leaf ivy-posframe
+         :ensure posframe ivy
+         :custom ((ivy-posframe-mode . t)))
+       (prog1 'ivy-posframe
+         (leaf-handler-package ivy-posframe posframe nil)
+         (leaf-handler-package ivy-posframe ivy nil)
+         (custom-set-variables
+          '(ivy-posframe-mode t "Customized with leaf in ivy-posframe block"))))))
+#+end_src
+
+~leaf~ を使う上で必要な知識ではないですが、 ~leaf-handler-package~ とはパッケージインストールのためのルーチンをまとめたマクロです。
+展開すると下記のようになります。
+
+キャッシュを検索し、存在しない場合はローカルレシピの更新を行った後にパッケージのインストールを行ないます。
+
+キャッシュが存在したとしてもMELPAに登録された、バージョン名を含めたパッケージ名は時々刻々変わるため、一度インストールに失敗したらレシピの更新を行った後でもう一度ダウンロードを試行します。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/handler-package
+    '(((leaf macrostep :ensure t)
+       (prog1 'macrostep
+         (leaf-handler-package macrostep macrostep nil)))
+
+      ((leaf-handler-package macrostep macrostep nil)
+       (unless (package-installed-p 'macrostep)
+         (unless (assoc 'macrostep package-archive-contents)
+           (package-refresh-contents))
+         (condition-case err
+             (package-install 'macrostep)
+           (error
+            (condition-case err
+                (progn
+                  (package-refresh-contents)
+                  (package-install 'macrostep))
+              (error
+               (signal 'error
+                       (format "In `macrostep' block, failed to :package of macrostep.  Error msg: %s"
+                               (error-message-string err)))))))))))
+#+end_src
+
+この復帰動作は ~use-package~ が出力するコードに含まれていません。
+Emacs起動時にパッケージインストールに失敗して、手動でレシピを更新した後にEmacsを再起動した経験は一度や二度ではないと思います。
+ ~leaf~ ではそのようなことは起こりません。
+
+また、 ~leaf~ は元々 ~:ensure~ キーワードで ~package.el~ のみをサポートしていましたが、
+leaf-keywordsパッケージによるキーワード追加の恩恵を得ることで ~:el-get~, ~:straight~ のキーワードを使用することができるようになりました。
+そのため ~pacakge.el~ 専用のキーワードとして ~:package~ というキーワードを用意しました。
+
+~:pacakge~ キーワードは ~:ensure~ キーワードと全く同じです。 ~package.el~ を使うことを強くアピールしたい時はこのキーワードを使うことができます。
+ただ将来的に ~:ensure~ キーワードを「パッケージをインストールする」という意味の汎用的なキーワードにして、処理するバックエンドをカスタマイズできるようにするかもしれません。
+その場合でも ~:ensure~ を処理するデフォルトのパッケージは ~package.el~ にするので、動作が意図せず変わることはないです。
+
+さて、 ~el-get~ と ~straight~ の使い方は他の記事に譲りますが、 ~leaf~ はこれらの全機能を ~leaf~ から使用することができます。
+  - el-get: [[https://tarao.hatenablog.com/entry/20150221/1424518030][Caskはもう古い、これからはEl-Get - いまどきのEmacsパッケージ管理]]
+  - straight: [[https://nukosuke.hatenablog.jp/entry/straight-el][Emacsパッケージマネージャ決定版：これからのパッケージ管理はstraight.elで決まり！]]
+
+典型的な使い方は以下に示すとおりです。
+特にこだわりがない場合は、 ~package.el~ でインストールできるパッケージは ~:ensure~ を使って、
+GitHubにしか置いていないパッケージを ~:el-get~ でインストールするようにする方針が手軽だと思います。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/el-get
+    '(((leaf leaf
+         :el-get t)
+       (prog1 'leaf
+         (eval-after-load 'el-get
+           '(progn
+              (el-get-bundle leaf)))))
+
+      ((leaf leaf
+         :el-get conao3/leaf.el leaf-polyfill)
+       (prog1 'leaf
+         (eval-after-load 'el-get
+           '(progn
+              (el-get-bundle conao3/leaf.el)
+              (el-get-bundle leaf-polyfill)))))
+
+      ((leaf leaf
+         :init (leaf-pre-init)
+         :el-get
+         (yaicomplete :url "https://github.com/tarao/elisp.git"
+                      :features yaicomplete)
+         (zenburn-theme :url "https://raw.githubusercontent.com/bbatsov/zenburn-emacs/master/zenburn-theme.el"
+                        (load-theme 'zenburn t))
+         (kazu-yamamoto/Mew :name mew :build ("./configure" "make"))
+         :config (leaf-init))
+       (prog1 'leaf
+         (eval-after-load 'el-get
+           '(progn
+              (el-get-bundle yaicomplete :url "https://github.com/tarao/elisp.git" :features yaicomplete)
+              (el-get-bundle zenburn-theme :url "https://raw.githubusercontent.com/bbatsov/zenburn-emacs/master/zenburn-theme.el"
+                (load-theme 'zenburn t))
+              (el-get-bundle kazu-yamamoto/Mew :name mew :build ("./configure" "make"))))
+         (leaf-pre-init)
+         (leaf-init)))))
+
+  (cort-deftest-with-macroexpand leaf/straight
+    '(((leaf leaf
+         :straight t)
+       (prog1 'leaf
+         (eval-after-load 'straight
+           '(progn
+              (straight-use-package 'leaf)))))
+
+      ((leaf leaf
+         :straight leaf leaf-polyfill)
+       (prog1 'leaf
+         (eval-after-load 'straight
+           '(progn
+              (straight-use-package 'leaf)
+              (straight-use-package 'leaf-polyfill)))))
+
+      ((leaf leaf
+         :init (leaf-pre-init)
+         :straight
+         (zenburn-theme :type git :host github :repo "fake/fake")
+         (yaicomplete :type git :host github :repo "fake/faker")
+         (mew :type git :host gitlab :repo "fake/fakest" :no-build)
+         :config (leaf-init))
+       (prog1 'leaf
+         (eval-after-load 'straight
+           '(progn
+              (straight-use-package '(zenburn-theme :type git :host github :repo "fake/fake"))
+              (straight-use-package '(yaicomplete :type git :host github :repo "fake/faker"))
+              (straight-use-package '(mew :type git :host gitlab :repo "fake/fakest" :no-build))))
+         (leaf-pre-init)
+         (leaf-init)))))
+#+end_src
+
+*** :preface, :init, :config
+言語実装ガチ勢からの指摘は怖いですが、これまで見た通り、 ~leaf~ は ~leaf~ 独自のDSLからEmacsが理解可能なElispに変換するトランスパイラとして、ある面は見ることができると思います。
+
+トランスパイラなら、そのトランスパイラが対応していない機能に対して、ネイティブに記述する方法が何かしら用意されているもので、 ~leaf~ もそれにもれず実装しています。
+
+3つのキーワードはその展開位置の差異のみです。
+  - ~:preface~ は ~:if~, ~:when~, ~:unless~ の展開より先に展開されます。つまり、条件分岐に関係なく、常に実行されます
+  - ~:init~ は ~:require~ の展開よりも先に展開されます。
+  - ~:config~ は ~:require~ の展開より後に展開されます。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/preface
+    '(((leaf leaf
+         :preface
+         (defun leaf-availablep ()
+           (version<= "22.1" emacs-version))
+         (defun leaf-keywords-availablep ()
+           (version<= "24.4" emacs-version))
+         :when (leaf-availablep) (leaf-keywords-availablep)
+         :init
+         (leaf-pre-init1)
+         (leaf-pre-init2)
+         :require t
+         :config
+         (leaf-init-1)
+         (leaf-init-2))
+       (prog1 'leaf
+         (defun leaf-availablep nil
+           (version<= "22.1" emacs-version))
+         (defun leaf-keywords-availablep nil
+           (version<= "24.4" emacs-version))
+         (when
+             (and
+              (leaf-availablep)
+              (leaf-keywords-availablep))
+           (leaf-pre-init1)
+           (leaf-pre-init2)
+           (require 'leaf)
+           (leaf-init-1)
+           (leaf-init-2))))))
+#+end_src
+
+ここで ~leaf~ の展開順について説明します。 ~leaf~ は柔軟な入力を受け取るがゆえに、受け取ったままの状態ではほとんどの作業が行えません。
+また ~leaf~ は「キーワード自体の重複」もきちんと扱うことができます。そのため ~:config~ や ~:when~ キーワードが2つ以上ある場合なども正常に処理を行うことを求められます。
+
+そのため ~leaf~ が最初に行う作業は、きちんと「キーとそれに対する引数が一対一で対応」し、「重複したキーが存在しない」典型的なplistに変換することです。
+plistにできれば、そのplistをスタックとして考え、無くなるまでどんどんpopしていけば全ての引数の処理ができたことになります。
+
+さらに、「:prefaceは条件分岐キーワードより先に展開したい」などの順序に関する問題を解決するために、 ~leaf~ は整形されたplistを「善い順番」に並び替えます。
+
+その「善い順番」は内部変数のleaf-keywordsの並び順で、 ~*scratch*~ で ~(pl (leaf-available-keywords))~ を評価することで得ることができます。
+
+#+begin_src emacs-lisp
+  (pl (leaf-available-keywords))
+  ;; => (:disabled              ; :disabledはここ
+  ;;     :leaf-protect
+  ;;     :load-path
+  ;;     :leaf-autoload
+  ;;     :doc
+  ;;     :file
+  ;;     :url
+  ;;     :defun
+  ;;     :defvar
+  ;;     :preface               ; :prefaceはここ
+  ;;     :when                  ; 条件分岐キーワードはここ
+  ;;     :unless
+  ;;     :if
+  ;;     :ensure
+  ;;     :package
+  ;;     :straight
+  ;;     :el-get
+  ;;     :after
+  ;;     :commands
+  ;;     :bind
+  ;;     :bind*
+  ;;     :mode
+  ;;     :interpreter
+  ;;     :magic
+  ;;     :magic-fallback
+  ;;     :hook
+  ;;     :advice
+  ;;     :advice-remove
+  ;;     :hydra
+  ;;     :combo
+  ;;     :combo*
+  ;;     :smartrep
+  ;;     :smartrep*
+  ;;     :chord
+  ;;     :chord*
+  ;;     :leaf-defer
+  ;;     :pre-setq
+  ;;     :init                  ; :initはここ
+  ;;     :require               ; :requireはここ
+  ;;     :custom
+  ;;     :custom-face
+  ;;     :setq
+  ;;     :setq-default
+  ;;     :diminish
+  ;;     :delight
+  ;;     :config)               ; :configはここ
+#+end_src
+
+このリストを見ればこの節で説明した展開順は自明で、それは内部変数leaf-keywordsの並び順に由来していることが分かります。
+
+*** :commands
+Emacsには起動を早くするために、起動時にはある「エントリーポイント」が列挙されたファイルのみを読み込み、その関数が実行されたときに実際のパッケージのロードを行うようにする仕組みがあります。
+
+「善いパッケージ」はユーザーがエントリーポイントとして実行する関数についてきちんとマジックコメントを記載し、パッケージマネージャに指示を与えますが、メンテナンス状況が良くないパッケージなどは
+そのマジックコメントが正しく記載されていない場合があります。
+
+その限られた場合にこのキーワードを使い、leaf--nameの関数としてautoloadを設定します。
+
+また、後述しますが、バインド系のキーワードに設定された関数は全て ~:commands~ と同じ形式でautoloadを設定されます。
+さらに言えば、このautoloadがきちんと設定される副作用を目的として、 ~leaf~ のキーワードを使うメリットがあります。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/commands
+    '(((leaf lingr :ensure t :commands lingr-login)
+       (prog1 'lingr
+         (autoload (function lingr-login) "lingr" nil t)
+         (leaf-handler-package lingr lingr nil)))
+
+      ((leaf leaf
+         :commands leaf leaf-pairp leaf-plist-get)
+       (prog1 'leaf
+         (autoload #'leaf "leaf" nil t)
+         (autoload #'leaf-pairp "leaf" nil t)
+         (autoload #'leaf-plist-get "leaf" nil t)))))
+#+end_src
+
+*** :after
+パッケージにはそれぞれ、動作するための前提条件があり、他のパッケージに依存するパッケージは極めて一般的です。
+その場合、lazy-laodを考慮した上で、あるパッケージが読み込まれた「後に」ロードや設定を行う必要があることがあります。
+
+~:after~ キーワードは単に数個のシンボルを指定するだけで、強力な ~eval-after-load~ 文を生成します。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/after
+    '(((leaf leaf-browser
+         :after leaf
+         :require t
+         :config (leaf-browser-init))
+       (prog1 'leaf-browser
+         (eval-after-load 'leaf
+           '(progn
+              (require 'leaf-browser)
+              (leaf-browser-init)))))
+
+      ((leaf leaf-browser
+         :after leaf org orglyth
+         :require t
+         :config (leaf-browser-init))
+       (prog1 'leaf-browser
+         (eval-after-load 'orglyth
+           '(eval-after-load 'org
+              '(eval-after-load 'leaf
+                 '(progn
+                    (require 'leaf-browser)
+                    (leaf-browser-init)))))))))
+#+end_src
+
+*** :bind, :bind*
+これまでにも数回出てきていますが、 ~:bind~, ~:bind*~ キーワードは ~use-package~ との大きな差異の一つです。
+
+~:bind~ は通常のglobal-mapとキーマップへのキーバインドです。
+~:bind*~ はEmacsにおける、より優先度の高いキーマップに登録するキーワードで、他のマイナーモードのキーバインドより優先して実行されます。
+
+特定のキーマップにバインドする場合は、 *リストの先頭に、シンボルかキーワードとして* キーマップを指定します。
+キーワードで指定するのは視認性に優れていますが、定義ジャンプができません。シンボルで指定すると可能になります。
+
+またキーマップが定義されるより前に、キーマップへのバインドを行おうとすると未定義エラーになるので、その場合はキーマップの指定に続けて、 ~:package~ キーワードを ~:bind~ キーワードの中で使用します。
+当該パッケージがロードされた後にキーバインドの設定を行うように設定できます。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/bind
+    '(((leaf color-moccur
+         :bind (("M-s" . nil)
+                ("M-s o" . isearch-moccur)
+                ("M-s i" . isearch-moccur-all)))
+       (prog1 'color-moccur
+         (autoload #'isearch-moccur "color-moccur" nil t)
+         (autoload #'isearch-moccur-all "color-moccur" nil t)
+         (leaf-keys (("M-s")
+                     ("M-s o" . isearch-moccur)
+                     ("M-s i" . isearch-moccur-all)))))
+
+      ((leaf color-moccur
+         :bind (("M-s O" . moccur)
+                (:isearch-mode-map
+                 :package isearch
+                 ("M-o" . isearch-moccur)
+                 ("M-O" . isearch-moccur-all))))
+       (prog1 'color-moccur
+         (autoload #'moccur "color-moccur" nil t)
+         (autoload #'isearch-moccur "color-moccur" nil t)
+         (autoload #'isearch-moccur-all "color-moccur" nil t)
+         (leaf-keys (("M-s O" . moccur)
+                     (:isearch-mode-map
+                      :package isearch
+                      ("M-o" . isearch-moccur)
+                      ("M-O" . isearch-moccur-all))))))
+
+      ;; you also use symbol instead of keyword to specify keymap
+      ((leaf color-moccur
+         :bind (("M-s O" . moccur)
+                (isearch-mode-map
+                 :package isearch
+                 ("M-o" . isearch-moccur)
+                 ("M-O" . isearch-moccur-all))))
+       (prog1 'color-moccur
+         (autoload #'moccur "color-moccur" nil t)
+         (autoload #'isearch-moccur "color-moccur" nil t)
+         (autoload #'isearch-moccur-all "color-moccur" nil t)
+         (leaf-keys (("M-s O" . moccur)
+                     (isearch-mode-map
+                      :package isearch
+                      ("M-o" . isearch-moccur)
+                      ("M-O" . isearch-moccur-all))))))))
+#+end_src
+
+*** :hydra, :chord, :chord*, :smartrep, :combo
+Emacsに新しいキーバインドを提供するパッケージは多数あり、それらに関するキーワードです。
+selectedは専用の関数が用意されていないためキーワードはありませんが、selected専用のキーマップに登録することで設定できます。
+  - hydra: [[https://qiita.com/Ladicle/items/feb5f9dce9adf89652cf#%25E5%25B0%258F%25E6%258C%2587%25E3%2582%2592%25E9%2585%25B7%25E4%25BD%25BF%25E3%2581%259B%25E3%2581%259A%25E3%2581%258B%25E3%2581%25A4%25E3%2582%25AD%25E3%2583%25BC%25E3%2583%2590%25E3%2582%25A4%25E3%2583%25B3%25E3%2583%2589%25E3%2581%25AE%25E3%2582%25AC%25E3%2582%25A4%25E3%2583%2589%25E3%2582%2592%25E5%2587%25BA%25E3%2581%2599----hydra][小指を酷使せず、かつキーバインドのガイドを出す -- hydra - Emacsモダン化計画 -かわEmacs編-]]
+  - hydra: [[https://medium.com/@mopemope/hydra-%25E3%2581%25AE%25E3%2582%25B9%25E3%2582%25B9%25E3%2583%25A1-88a4168f945c][Hydra のススメ]]
+  - key-chord: [[https://qiita.com/tadsan/items/9cc262e1772edb630dd9][物覚えが悪いから同時に押す]]
+  - smartrep: [[https://qiita.com/ongaeshi/items/5bf6c4a623290752ed70][highlight-symbolをsmartrepを使ってキー消費を抑えながらバインドする]]
+  - key-combo: [[https://qiita.com/yynozk/items/0141c92dca0992732af8][ソースコードを書いているときに "=" の前後にスペースを自動で挿入してくれる key-combo.el]]
+  - selected: [[https://qiita.com/takaxp/items/00245794d46c3a5fcaa8][selected.el で「選択して右クリック」的な概念を]]
+
+それぞれについての設定例はleaf-keywords.elのREADMEを参照してもらえればと思います。
+  - hydra: [[https://github.com/conao3/leaf-keywords.el#hydra-keyword][:hydra keyword - leaf-keywords.el README]]
+  - key-chord: [[https://github.com/conao3/leaf-keywords.el#hydra-keyword][:chord, :chord* keywords - leaf-keywords.el README]]
+  - smartrep: [[https://github.com/conao3/leaf-keywords.el#hydra-keyword][:smartrep, :smartrep* keywords - leaf-keywords.el README]]
+  - key-combo: [[https://github.com/conao3/leaf-keywords.el#hydra-keyword][:combo, :combo* keywords -leaf-keywords.el README]]
+  - selected
+
+    #+begin_src emacs-lisp
+      (leaf selected
+          :ensure t
+          :custom ((selected-global-mode . t))
+          :leaf-autoload nil
+          :preface
+          (defun c/eval-region ()
+            (interactive)
+            (when mark-active
+              (eval-region (region-beginning) (region-end) t)))
+          :bind ((:selected-keymap
+                  ("g" . google-this-noconfirm)
+                  (";" . comment-dwim)
+                  ("=" . count-words-region)
+                  ("f" . describe-function)
+                  ("v" . describe-variable)
+                  ("e" . c/eval-region)
+                  ("w" . osx-dictionary-search-pointer)
+                  ("5" . query-replace-from-region)
+                  ("q" . keyboard-quit)
+                  ("t" . org-table-convert-region))))
+    #+end_src
+
+*** :advice, :advice-remove
+Emacsには関数のアドバイス機構が用意されており、advice-addとadvice-removeでそれを設定できます。
+個人的には ~:around~ のみ覚えておけば、それで必要十分だと思っています。
+
+関数定義は ~:preface~ で行ない、アドバイスの付与と削除を ~:advice~ と ~:advice-remove~ で行ないます。
+~lambda~ も登録できますが、関数を定義して設定した方がアドバイスの修正がしやすいと思います。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/advice
+    '(((leaf leaf
+         :preface
+         (defun matu (x)
+           (princ (format ">>%s<<" x))
+           nil)
+         (defun matu-around0 (f &rest args)
+           (prog2
+               (princ "around0 ==>")
+               (apply f args)
+             (princ "around0 <==")))
+         (defun matu-before0 (&rest args)
+           (princ "before0:"))
+         :advice
+         (:around matu matu-around0)
+         (:before matu matu-before0))
+       (prog1 'leaf
+         (autoload #'matu-around0 "leaf" nil t)
+         (autoload #'matu-before0 "leaf" nil t)
+         (defun matu (x)
+           (princ
+            (format ">>%s<<" x))
+           nil)
+         (defun matu-around0
+             (f &rest args)
+           (prog2
+               (princ "around0 ==>")
+               (apply f args)
+             (princ "around0 <==")))
+         (defun matu-before0
+             (&rest args)
+           (princ "before0:"))
+         (advice-add 'matu :around #'matu-around0)
+         (advice-add 'matu :before #'matu-before0)))))
+
+  (cort-deftest-with-macroexpand leaf/advice-remove
+    '(((leaf leaf
+         :advice-remove ((:around matu matu-around0)
+                         (:before matu matu-before0)))
+       (prog1 'leaf
+         (autoload #'matu "leaf" nil t)
+         (advice-remove ':around #'matu)
+         (advice-remove ':before #'matu)))))
+#+end_src
+
+** 変数設定のためのキーワード
+*** :custom, :custom-face
+値設定系の指定は全てドット対で設定することにしたので、 ~use-package~  *とは違って、* ドット対で変数と値を設定します。
+「複数のドット対」と「ドット対のリスト」が指定できますが、常に「ドット対のリスト」を指定することで十分だと思います。
+
+また、好みの問題で、 ~custom-set-faces~ に関数ではないリストを指定するのは座りが悪く見えるので、 *クオートが必要* な点は注意する必要があります。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/custom
+    '(((leaf paren
+         :custom ((show-paren-delay . 0.0)
+                  (show-paren-mode  . t)))
+       (prog1 'paren
+         (custom-set-variables
+          '(show-paren-delay 0.0 "Customized with leaf in paren block")
+          '(show-paren-mode t "Customized with leaf in paren block"))))))
+
+  (cort-deftest-with-macroexpand leaf/custom-face
+    '(((leaf eruby-mode
+         :custom-face
+         (eruby-standard-face . '((t (:slant italic)))))
+       (prog1 'eruby-mode
+         (custom-set-faces
+          '(eruby-standard-face ((t (:slant italic)))))))))
+#+end_src
+
+また、 ~show-paren-mode~ に ~t~ を指定して有効にしていますが、この内部の仕組みについては別途記事が必要だと思います。
+とりあえず、マイナーモードの有効化については、この様に ~custom-set-variables~ を使って有効化できるので、簡単に ~:custom~ キーワードを使って有効化できます。
+
+~:setq~ や ~:pre-setq~ キーワードも用意されていますが、 ~defvar~ で宣言された変数も ~custom-set-variables~ を使って有効化できるので、簡単に ~:custom~ キーワードを使って設定できます。
+
+*** :mode, :interperter, :magic, :magic-fallback
+現在、パッケージ作者がきちんと ~auto-mode-alist~ の設定を行ってくれているので、このキーワードを使用する機会は少ないかもしれませんが、普通の割り当てではない割り当てを行う場面では必要になるかもしれません。
+
+私のinit.elでは ~web-mode~ のみがこのキーワードを使用しています。通常ドット対を期待しますが、ドット対のcdrを省略した場合、leaf--nameを指定されたものとして変換します。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/mode
+    '(((leaf web-mode
+         :mode "\\.js\\'" "\\.p?html?\\'")
+       (prog1 'web-mode
+         (autoload #'web-mode "web-mode" nil t)
+         (add-to-list 'auto-mode-alist '("\\.js\\'" . web-mode))
+         (add-to-list 'auto-mode-alist '("\\.p?html?\\'" . web-mode))))
+
+      ((leaf web-mode
+         :mode (("\\.html\\'" . web-mode)
+                (("\\.js\\'" "\\.p?html?\\'") . web-mode)))
+       (prog1 'web-mode
+         (autoload #'web-mode "web-mode" nil t)
+         (add-to-list 'auto-mode-alist '("\\.html\\'" . web-mode))
+         (add-to-list 'auto-mode-alist '("\\.js\\'" . web-mode))
+         (add-to-list 'auto-mode-alist '("\\.p?html?\\'" . web-mode))))))
+
+  (cort-deftest-with-macroexpand leaf/interpreter
+    '(((leaf ruby-mode
+         :mode "\\.rb\\'" "\\.rb2\\'" ("\\.rbg\\'" . rb-mode)
+         :interpreter "ruby")
+       (prog1 'ruby-mode
+         (autoload #'ruby-mode "ruby-mode" nil t)
+         (autoload #'rb-mode "ruby-mode" nil t)
+         (add-to-list 'auto-mode-alist '("\\.rb\\'" . ruby-mode))
+         (add-to-list 'auto-mode-alist '("\\.rb2\\'" . ruby-mode))
+         (add-to-list 'auto-mode-alist '("\\.rbg\\'" . rb-mode))
+         (add-to-list 'interpreter-mode-alist '("ruby" . ruby-mode))))))
+#+end_src
+
+~:interpreter~ キーワードはファイル冒頭のシバンを見てメジャーモードを決定します。Emacsが開くファイルに対してどの様にメジャーモードを決定しているかは以下のページが詳しいです。
+  - [[https://qiita.com/fj_/items/a540b02441ebffb8973c][emacsのauto-mode-alistが動かない！？]]
+
+同じ使い方で ~:magic~ と ~:magic-fallback~ キーワードも用意されています。
+それぞれ、上の記事でも紹介されていた、 ~magic-mode-alist~ と ~magic-fallback-mode-alist~ に対するキーワードです。
+  - [[https://github.com/conao3/leaf.el#magic-magic-fallback-keywords][:magic, :magic-fallback keywords - leaf.el README]]
+
+*** :hook
+hookを設定するキーワードです。 ~use-package~  *とは違って、* hookの全体のシンボルを指定する必要があります。
+これは ~use-package-hook-name-suffix~ が ~""~ に設定してある場合の挙動と同じです。これは定義ジャンプをしやすくする効果があります。
+
+~:mode~ などと同じように、ドット対を期待してますが、ドット対のcdrを省略した場合、leaf--nameを指定されたものとして変換します。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/hook
+    '(((leaf ace-jump-mode
+         :hook cc-mode-hook
+         :config (ace-jump-mode))
+       (prog1 'ace-jump-mode
+         (autoload #'ace-jump-mode "ace-jump-mode" nil t)
+         (add-hook 'cc-mode-hook #'ace-jump-mode)
+         (eval-after-load 'ace-jump-mode
+           '(progn
+              (ace-jump-mode)))))
+
+      ((leaf ace-jump-mode
+         :hook cc-mode-hook (prog-mode-hook . my-ace-jump-mode))
+       (prog1 'ace-jump-mode
+         (autoload #'ace-jump-mode "ace-jump-mode" nil t)
+         (autoload #'my-ace-jump-mode "ace-jump-mode" nil t)
+         (add-hook 'cc-mode-hook #'ace-jump-mode)
+         (add-hook 'prog-mode-hook #'my-ace-jump-mode)))
+
+      ((leaf ace-jump-mode
+         :hook ((cc-mode-hook prog-mode-hook) . my-ace-jump-mode))
+       (prog1 'ace-jump-mode
+         (autoload #'my-ace-jump-mode "ace-jump-mode" nil t)
+         (add-hook 'cc-mode-hook #'my-ace-jump-mode)
+         (add-hook 'prog-mode-hook #'my-ace-jump-mode)))))
+#+end_src
+
+*** :load-path
+load-pathへの値の追加を行うキーワードです。 ~use-package~  *とは違って、* load-pathに指定する値の全体を指定する必要があります。
+ ~use-package~ のように ~.emacs.d~ からの相対パスで指定したい場合、バッククオートを使用して関数に変換させます。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/load-path
+    '(((leaf leaf
+         :load-path "~/.emacs.d/elpa-archive/leaf.el/"
+         :require t
+         :config (leaf-init))
+       (prog1 'leaf
+         (add-to-list 'load-path "~/.emacs.d/elpa-archive/leaf.el/")
+         (require 'leaf)
+         (leaf-init)))
+
+      ((leaf leaf
+         :load-path `(,(mapcar (lambda (elm)
+                                 (concat "~/.emacs.d/elpa-archive/" elm "/"))
+                               '("leaf.el" "leaf-broser.el" "orglyth.el")))
+         :require t
+         :config (leaf-init))
+       (prog1 'leaf
+         (add-to-list 'load-path "~/.emacs.d/elpa-archive/leaf.el/")
+         (add-to-list 'load-path "~/.emacs.d/elpa-archive/leaf-broser.el/")
+         (add-to-list 'load-path "~/.emacs.d/elpa-archive/orglyth.el/")
+         (require 'leaf)
+         (leaf-init)))))
+#+end_src
+
+** 条件分岐キーワード
+*** :disabled
+ ~use-package~  *とは違って、* キーワードを指定しただけでは活性化しません。また複数の値を指定した場合、より上で指定した値のみが採用されます。
+
+活性化の判断は ~unless~ を使っているので、活性化させるために厳密に ~t~ を指定する必要はありません。
+いわゆる ~non-nil~ の値として理解されれば、 ~:disabled~ は活性化し、leafブロック全体が ~nil~ に変換されます。
+
+評価後の値を判断するので、おもむろに変数や関数を渡すことができます。
+
+#+begin_src emacs-lisp
+  (defvar leaf-keywords
+    (cdt
+     '(:dummy
+       :disabled (unless (eval (car leaf--value)) `(,@leaf--body))
+       ...)))
+#+end_src
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/disabled
+    '(((leaf leaf :disabled t       :config (leaf-init))
+       nil)
+
+      ((leaf leaf :disabled nil     :config (leaf-init))
+       (prog1 'leaf
+         (leaf-init)))
+
+      ((leaf leaf :disabled nil t   :config (leaf-init))
+       (prog1 'leaf
+         (leaf-init)))
+
+      ((leaf leaf :disabled t :disabled nil :config (leaf-init))
+       nil)))
+#+end_src
+
+*** :if, :when, :unless
+leafブロックを指定されたキーワードに対応する関数でくくります。
+これらの条件分岐に利用したい関数などは、この条件分岐より前に展開する必要があるので、 ~:preface~ キーワードを使ってください。
+
+複数の値を指定した場合は、 ~and~ 関数によって接続します。
+
+~unless~ キーワードと ~:disabled~ キーワードの違いですが、「複数の値の扱い方」と「 ~:preface~ が実行されるか」が異なります。
+
+~:disabled~ は一番上の値しか見ず、 ~and~ で全ての値を考慮することはありません。
+そして ~:preface~ より早く評価されるので、 ~:disabled~ が活性化された場合は ~:preface~ ごとnilとして虚空に消える点が異なります。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/if
+    '(((leaf leaf
+         :if leafp
+         :require t
+         :config (leaf-init))
+       (prog1 'leaf
+         (if leafp
+             (progn
+               (require 'leaf)
+               (leaf-init)))))
+
+      ((leaf leaf
+         :if leafp leaf-avairablep (window-system)
+         :require t
+         :config (leaf-init))
+       (prog1 'leaf
+         (if (and leafp leaf-avairablep (window-system))
+             (progn
+               (require 'leaf)
+               (leaf-init)))))
+
+      ((leaf leaf
+         :if leafp leaf-avairablep (window-system)
+         :when leaf-browserp
+         :require t
+         :config (leaf-init))
+       (prog1 'leaf
+         (when leaf-browserp
+           (if (and leafp leaf-avairablep (window-system))
+               (progn
+                 (require 'leaf)
+                 (leaf-init))))))))
+
+  (cort-deftest-with-macroexpand leaf/when
+    '(((leaf leaf
+         :when leafp
+         :require t
+         :config (leaf-init))
+       (prog1 'leaf
+         (when leafp
+           (require 'leaf)
+           (leaf-init))))
+
+      ((leaf leaf
+         :when leafp leaf-avairablep (window-system)
+         :require t
+         :config (leaf-init))
+       (prog1 'leaf
+         (when (and leafp leaf-avairablep (window-system))
+           (require 'leaf)
+           (leaf-init))))))
+
+  (cort-deftest-with-macroexpand leaf/unless
+    '(((leaf leaf
+         :unless leafp
+         :require t
+         :config (leaf-init))
+       (prog1 'leaf
+         (unless leafp
+           (require 'leaf)
+           (leaf-init))))
+
+      ((leaf leaf
+         :unless leafp leaf-avairablep (window-system)
+         :require t
+         :config (leaf-init))
+       (prog1 'leaf
+         (unless (and leafp leaf-avairablep (window-system))
+           (require 'leaf)
+           (leaf-init))))))
+#+end_src
+
+** バイトコンパイラキーワード
+*** :defun, :defvar
+init.elをバイトコンパイルする際にワーニングが出る場合は ~declare-function~ と ~defvar~ によってワーニングを抑制する必要があります。
+
+~:defun~ もドット対(やそのリスト)を期待していますが、ドット対のcdrを省略した場合はleaf--nameの関数として登録を行います。
+
+~:defvar~ はただ変数を定義するだけなので、シンボル(のリスト)を期待します。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/defun
+    '(((leaf leaf
+         :defun leaf leaf-normalize-plist leaf-merge-dupkey-values-plist)
+       (prog1 'leaf
+         (declare-function leaf "leaf")
+         (declare-function leaf-normalize-plist "leaf")
+         (declare-function leaf-merge-dupkey-values-plist "leaf")))
+ 
+      ((leaf leaf
+         :defun ((lbrowser-open lbrowser-close) . leaf-browser))
+       (prog1 'leaf
+         (declare-function lbrowser-open "leaf-browser")
+         (declare-function lbrowser-close "leaf-browser")))))
+
+  (cort-deftest-with-macroexpand leaf/defvar
+    '(((leaf leaf
+         :defvar leaf leaf-normalize-plist leaf-merge-dupkey-values-plist)
+       (prog1 'leaf
+         (defvar leaf)
+         (defvar leaf-normalize-plist)
+         (defvar leaf-merge-dupkey-values-plist)))
+
+      ((leaf leaf
+         :defvar (leaf leaf-normalize-plist leaf-merge-dupkey-values-plist))
+       (prog1 'leaf
+         (defvar leaf)
+         (defvar leaf-normalize-plist)
+         (defvar leaf-merge-dupkey-values-plist)))))
+#+end_src
+
+** ドキュメントキーワード
+*** :doc, :file, :url
+展開結果に影響を及ぼさない、ドキュメントのためのキーワードです。
+ポイント下のURLを開いたり、ファイルパスのファイルを開いたりするパッケージと相性が良いと思います。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/doc
+    '(((leaf leaf
+         :doc "Symplify init.el configuration"
+         :config (leaf-init))
+       (prog1 'leaf
+         (leaf-init)))
+
+      ((leaf leaf
+         :file "~/.emacs.d/elpa/leaf.el/leaf.el"
+         :config (leaf-init))
+       (prog1 'leaf
+         (leaf-init)))
+
+      ((leaf leaf
+         :url "https://github.com/conao3/leaf.el"
+         :config (leaf-init))
+       (prog1 'leaf
+         (leaf-init)))
+
+      ((leaf leaf
+         :doc "Symplify init.el configuration"
+         :file "~/.emacs.d/elpa/leaf.el/leaf.el"
+         :url "https://github.com/conao3/leaf.el"
+         :config (leaf-init))
+       (prog1 'leaf
+         (leaf-init)))
+
+      ((leaf leaf
+         :doc "Symplify init.el configuration"
+         "
+  (leaf leaf
+    :doc \"Symplify init.el configuration\"
+    :config (leaf-init))
+   => (progn
+        (leaf-init))"
+         "
+  (leaf leaf
+    :disabled nil
+    :config (leaf-init))
+   => (progn
+        (leaf-init))"
+         :file "~/.emacs.d/elpa/leaf.el/leaf.el"
+         :url "https://github.com/conao3/leaf.el"
+         :config (leaf-init))
+       (prog1 'leaf
+         (leaf-init)))))
+#+end_src
+
+** システムキーワード
+ ~leaf~ はそれぞれのleafブロックに対して自動で付与するキーワードがあります。
+対応するキーワードに対して ~nil~ を設定することで対応する機能をブロック単位で無効にできます。
+
+*** :leaf-defer
+~leaf-defer-keywords~ に指定されたキーワードに値を設定すると、 ~leaf~ は ~require~ 文や ~:config~ キーワードを ~eval-after-load~ でくくって、遅延ロードしようとします。
+
+~:leaf-defer~ に ~nil~ を指定することによって、この機能をオフにできます。
+これはキーバインドを設定したものの、Emacs起動時に必ず読み込みたいパッケージなどに有用です。
+
+また、これは ~use-package~ における ~:demand~ キーワードに対応しています。
+
+#+begin_src emacs-lisp
+  (defcustom leaf-defer-keywords (cdr '(:dummy
+                                        :bind :bind*
+                                        :mode :interpreter :magic :magic-fallback
+                                        :hook :commands))
+    "Specifies a keyword to perform a deferred load.
+  `leaf' blocks are lazily loaded by their package name
+  with values for these keywords."
+    :type 'sexp
+    :group 'leaf)
+
+  (cort-deftest-with-macroexpand leaf/leaf-defer
+    '(((leaf leaf
+         :commands leaf
+         :config (leaf-init))
+       (prog1 'leaf
+         (autoload #'leaf "leaf" nil t)
+         (eval-after-load 'leaf
+           '(progn
+              (leaf-init)))))
+
+      ((leaf leaf
+         :leaf-defer nil
+         :commands leaf
+         :config (leaf-init))
+       (prog1 'leaf
+         (autoload #'leaf "leaf" nil t)
+         (leaf-init)))))
+#+end_src
+
+*** :leaf-protect
+ ~leaf~ はあるパッケージの設定に失敗したとしても、エラーを報告するのみで、そこでinit.elの評価を止めることはしないようにコードを生成します。
+
+なぜなら ~leaf~ はパッケージごとの設定に分かれているため、一つのパッケージの設定に失敗したとしても、他のパッケージのロードや設定を試みる価値があるからです。
+
+このキーワードを ~nil~ に設定すると、この機能をオフにします。あるパッケージのロードに失敗したら、全体のロードを取り止めたいパッケージなどに設定すると良いと思います。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand-let leaf/leaf-protect
+      ((leaf-expand-leaf-protect t))
+    '(((leaf leaf
+         :config (leaf-init))
+       (prog1 'leaf
+         (leaf-handler-leaf-protect leaf
+           (leaf-init))))
+
+      ((leaf leaf
+         :leaf-protect nil
+         :config (leaf-init))
+       (prog1 'leaf
+         (leaf-init)))
+
+      ((leaf-handler-leaf-protect leaf
+         (leaf-load)
+         (leaf-init))
+       (condition-case err
+           (progn
+             (leaf-load)
+             (leaf-init))
+         (error
+          (leaf-error "Error in `leaf' block.  Error msg: %s"
+                      (error-message-string err)))))))
+#+end_src
+
+*** :leaf-autoload
+ ~leaf~ はキーバインドのキーワードなどで、関数をleaf--nameの関数として自動的に ~autoload~ として登録するようにコードを生成します。
+
+このキーワードを ~nil~ に設定すると、この機能をオフにします。個人的に使いどころが分かりません。。
+
+#+begin_src emacs-lisp
+  (cort-deftest-with-macroexpand leaf/leaf-autoload
+    '(((leaf leaf
+         :commands leaf
+         :config (leaf-init))
+       (prog1 'leaf
+         (autoload #'leaf "leaf" nil t)
+         (eval-after-load 'leaf
+           '(progn
+              (leaf-init)))))
+
+      ((leaf leaf
+         :leaf-autoload nil
+         :commands leaf
+         :config (leaf-init))
+       (prog1 'leaf
+         (eval-after-load 'leaf
+           '(progn
+              (leaf-init)))))))
+#+end_src
+
+* こまごまとしたこと
+** 実践例
+私のinit.elはGitHubで公開しており、全てのパッケージの設定をleafで行なっているinit.elです。
+キーワードの使い方は具体例と一緒に紹介しましたが、実践的な設定方法は私のinit.elを見るのが一番早いかもしれません。
+  - [[https://github.com/conao3/dotfiles/blob/master/.dotfiles/.emacs.d/init.el][dotfiles/.dotfiles/.emacs.d/init.el - conao3/dotfiles]]
+ 
+** パッケージへの貢献について
+leafはEmacs標準添付を目指しているので、PRを採用する際にはFSFへのサインが必要になりますが、外部パッケージにごりごりに依存しているleaf-keywords.elならその心配はありません。
+
+新しいキーワードを追加したいという時にはぜひPRを送っていただけると幸いです。
+  - [[https://github.com/conao3/leaf.el][leaf.el - conao3/leaf.el]]
+  - [[https://github.com/conao3/leaf-keywords.el#hydra-keyword][leaf-keywords.el - conao3/leaf-keywords.el]]
+  
+** 困ったことについて
+なにかバグや改善すべきことがあれば、気軽にGitHubでissueを開いてもらえればと思います。
+しかし、「そもそもissueを開く問題なのか」が分からなかったり、「もっと気軽に相談したい」ということがあれば[[https://conao3-support.slack.com/join/shared_invite/enQtNjUzMDMxODcyMjE1LWUwMjhiNTU3Yjk3ODIwNzAxMTgwOTkxNmJiN2M4OTZkMWY0NjI4ZTg4MTVlNzcwNDY2ZjVjYmRiZmJjZDU4MDE][専用のSlack]]を用意しているので、そちらで連絡をとれればと思います。
+
+これが日本人が作っているパッケージの強みでもあるので、ぜひ初心者の方でも気軽に ~leaf~ を使ってもらえればと思います。
+
+** 寄付について
+日本で、こういう宣伝は卑しく受け止められるとは思ってはいますが、私は大学生で収入もほとんど無く、新しくオライリーの本を買うにも躊躇することが多々あります。
+このleafを面白いと思っていただけたり、他にも様々なEmacs関連パッケージを作っている私を金銭的にサポートしてあげてもいいと思ってもらえる人がいれば、ぜひ[[https://www.patreon.com/conao3][Patreon]]になって頂ければと思います。
+
+私が関わったものは全てGitHubで公開しており、代表的なものは以下のものです。
+  - リリースしたもの
+    - [[https://github.com/conao3/leaf.el/blob/master/leaf.el][leaf.el]]: use-packageを発展させた、シンプルで拡張性の高い、パッケージ設定のためのパッケージ
+    - [[https://github.com/conao3/leaf-keywords.el][leaf-keywords.el]]: leaf.elのための外部パッケージに関する追加キーワード
+    - [[https://github.com/conao3/seml-mode.el][seml-mote.el]]: S式からHTMLを生成するジェネレータとそのメジャーモード
+    - [[https://github.com/conao3/ddskk-posframe.el][ddskk-posframe.el]]: ddskkの変換ポップアップをposframeで表示
+    - [[https://github.com/conao3/cort-test.el][cort-test.el]]: Elispパッケージのための、シンプルなテストフレームワーク
+  - メンテナンスを行っているもの
+    - [[https://github.com/tumashu/ivy-posframe][ivy-posframe]]: ivyをposframeで表示するためのパッケージ
+  - 開発中のもの
+    - [[https://github.com/conao3/leaf-browser.el][leaf-browser.el]]: leaf.elの設定を最近のリッチエディタのように、ブラウザ上でGUIで行うパッケージ
+    - [[https://github.com/conao3/feather.el][feather.el]]: 並列ダウンロード/並列バイトコンパイルを備えた、新しいパッケージマネージャ
+    - [[https://github.com/conao3/liskk.el][liskk.el]]: スクラッチから実装している、Emacsで動作する新しいSKK
+    - [[https://github.com/conao3/navbar.el][navbar.el]]: Emacsに「本来の」タブバーを追加するパッケージ
+
+# - リリースしたもの
+#     | パッケージ名      | 説明                                                                              |   |
+#     |-------------------+-----------------------------------------------------------------------------------+---|
+#     | [[https://github.com/conao3/leaf.el/blob/master/leaf.el][leaf.el]]           | use-packageを発展させた、シンプルで拡張性の高い、パッケージ設定のためのパッケージ |   |
+#     | [[https://github.com/conao3/leaf-keywords.el][leaf-keywords.el]]  | leaf.elのための外部パッケージに関する追加キーワード                               |   |
+#     | [[https://github.com/conao3/seml-mode.el][seml-mote.el]]      | S式からHTMLを生成するジェネレータとそのメジャーモード                             |   |
+#     | [[https://github.com/conao3/ddskk-posframe.el][ddskk-posframe.el]] | ddskkの変換ポップアップをposframeで表示                                           |   |
+#     | [[https://github.com/conao3/cort-test.el][cort-test.el]]      | Elispパッケージのための、シンプルなテストフレームワーク                           |   |
+# 
+# - メンテナンスを行っているもの
+#     | パッケージ名 | 説明                                    |
+#     |--------------+-----------------------------------------|
+#     | [[https://github.com/tumashu/ivy-posframe][ivy-posframe]] | ivyをposframeで表示するためのパッケージ |
+#     
+# - 開発中のもの
+#     | パッケージ名    | 説明                                                                         |
+#     |-----------------+------------------------------------------------------------------------------|
+#     | [[https://github.com/conao3/leaf-browser.el][leaf-browser.el]] | leaf.elの設定を最近のリッチエディタのように、ブラウザ上でGUIで行うパッケージ |
+#     | [[https://github.com/conao3/feather.el][feather.el]]      | 並列ダウンロード/並列バイトコンパイルを備えた、新しいパッケージマネージャ    |
+#     | [[https://github.com/conao3/liskk.el][liskk.el]]        | スクラッチから実装している、Emacsで動作する新しいSKK                         |
+#     | [[https://github.com/conao3/navbar.el][navbar.el]]       | Emacsに「本来の」タブバーを追加するパッケージ                                |
+
+また6月からGitHubには「毎日コミット」を行なっており、毎日空いた時間を見つけながら精力的に活動を行なっています。
+
+#+begin_example
+![Capture 2019-06-15 22.40.06.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/9567/12878011-befa-09a2-50b2-c66089579de4.png)
+#+end_example
+
+これらのパッケージにこれからも関われるように、そして更なる新しいパッケージを作るために、ぜひ[[https://www.patreon.com/conao3][Patreonでサポート]]をお願いします。
+
+** まとめ
+~use-package~ のストレスを解消するために、スクラッチから新しい ~use-package~ 実装を作ってしまいました!
+
+MELPAで公開されたので導入のハードルも極めて低くなりました。ぜひ ~leaf~ を使って、整然として編集しやすいinit.elを書きましょう!
