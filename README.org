@@ -1,7 +1,7 @@
 #+author: conao3
 #+date: <2018-02-03 Sun>
 
-[[https://github.com/conao3/orglyth-src][https://raw.githubusercontent.com/conao3/files/master/header/png/orglyth-src.png]]
+[[https://github.com/conao3/orglyth-src][https://raw.githubusercontent.com/conao3/files/master/blob/headers/png/orglyth-src.png]]
 [[https://github.com/conao3/orglyth-src/blob/master/LICENSE][https://img.shields.io/github/license/conao3/orglyth-src.svg?style=flat-square]]
 [[https://github.com/conao3/orglyth-src/releases][https://img.shields.io/github/tag/conao3/orglyth-src.svg?style=flat-square]]
 [[https://travis-ci.org/conao3/orglyth-src][https://img.shields.io/travis/conao3/orglyth-src/master.svg?style=flat-square]]
