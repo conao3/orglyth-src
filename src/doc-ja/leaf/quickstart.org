@@ -1,0 +1,141 @@
+#+title: leaf.elを始めよう
+#+author: conao3
+#+date: <2019-09-05 Thu 22:06>
+
+~leaf~ は一般的なEmacsパッケージと同様にインストールできます。
+ここでは代表的なインストール方法と典型的な設定方法について解説します。
+
+それぞれの方法で多少の違いはありますが、目的は ~leaf.el~, ~leaf-keywords~ をインストールし、 ~leaf-keywords~ の初期化を行なうことです。
+
+* package.el
+~leaf.el~, ~leaf-keywords.el~ はMELPAに登録されているため、
+Emacs-24以降ではEmacs標準添付の ~package.el~ を用いて簡単にインストールすることができます。
+
+下記のコードを ~\~/.emacs.d/init.el~ の冒頭に記述すると、そのコードの下から、 ~leaf~ を使えるようになります。
+
+#+begin_src emacs-lisp
+  ;; register MELPA URL
+  (custom-set-variables
+   '(package-archives '(("org"   . "https://orgmode.org/elpa/")
+                        ("melpa" . "https://melpa.org/packages/")
+                        ("gnu"   . "https://elpa.gnu.org/packages/"))))
+
+  ;; initialize package.el
+  (package-initialize)
+
+  ;; install leaf.el
+  (unless (package-installed-p 'leaf)
+    (package-refresh-contents)
+    (package-install 'leaf))
+
+  ;; install leaf-keywords.el
+  (leaf leaf-keywords
+    :ensure t
+    :init
+    ;; optional packages if you want to use :hydra, :el-get,,,
+    (leaf hydra :ensure t)
+    (leaf el-get :ensure t :custom ((el-get-git-shallow-clone . t)))
+    :config
+    ;; initialize leaf-keywords.el
+    (leaf-keywords-init))
+
+  ;;;;;;;;;;;;;;;; by below here, enjoy the leaf! ;;;;;;;;;;;;;;;;
+
+  ;;;; like this way...
+
+  ;; (leaf ivy
+  ;;   :ensure t
+  ;;   :leaf-defer nil
+  ;;   :custom ((ivy-use-selectable-prompt . t)
+  ;;
+  ;;            (ivy-mode     . t)
+  ;;            (counsel-mode . t))
+  ;;   :init
+  ;;   (leaf *ivy-requirements
+  ;;     :config
+  ;;     (leaf swiper :ensure t)
+  ;;     (leaf counsel :ensure t))
+  ;;   :bind* (("C-x C-r" . counsel-recentf)
+  ;;           ("C-s" . swiper))
+  ;;
+  ;;   :config
+  ;;   (leaf *other-ivy-packages
+  ;;     :config
+  ;;     (leaf ivy-hydra
+  ;;       :doc "Additional key bindings for Ivy"
+  ;;       :ensure t
+  ;;       :bind (("C-c i i" . hydra-ivy/body)))
+  ;;
+  ;;     (leaf ivy-xref
+  ;;       :doc "Ivy interface for xref results"
+  ;;       :when (version<= "25.1" emacs-version)
+  ;;       :ensure t
+  ;;       :custom ((xref-show-xrefs-function . #'ivy-xref-show-xrefs)))))
+#+end_src
+
+* manual install
+~package.el~ は ~leaf.el~ を単体でフェッチするため、 ~leaf.el~ の開発を行いたい場合などは不便です。
+
+もし ~\~/.emacs.d/site-lisp/leaf.el~ に[[https://github.com/conao3/leaf.el][leaf.elのレポジトリ]]をcloneしている場合は、次のコードをinit.elの先頭に記述し、 ~leaf~ をロード、初期化します。
+
+NOTE: ~leaf~ を ~require~ で読み込んでいるため、 ~package.el~ の設定を ~leaf~ で行うことが可能になっています。
+NOTE: ~(locate-user-emacs-file "site-lisp/leaf.el")~ は例えば ~"~/.emacs.d/site-lisp/leaf.el"~ を返却します。
+
+#+BEGIN_SRC emacs-lisp
+  ;; add to load-path
+  (add-to-list 'load-path (locate-user-emacs-file "site-lisp/leaf.el"))
+
+  ;; load leaf
+  (require 'leaf)
+
+  (leaf package
+    :custom ((package-archives . '(("org"   . "https://orgmode.org/elpa/")
+                                   ("melpa" . "https://melpa.org/packages/")
+                                   ("gnu"   . "https://elpa.gnu.org/packages/"))))
+    :config
+    (package-initialize))
+
+  (leaf leaf-keywords
+    :ensure t
+    :init
+    ;; optional packages if you want to use :hydra, :el-get,,,
+    (leaf hydra :ensure t)
+    (leaf el-get :ensure t :custom ((el-get-git-shallow-clone  . t)))
+    :config
+    ;; initialize leaf-keywords.el
+    (leaf-keywords-init))
+
+  ;;;;;;;;;;;;;;;; by below here, enjoy the leaf! ;;;;;;;;;;;;;;;;
+
+  ;;;; like this way...
+
+  ;; (leaf ivy
+  ;;   :ensure t
+  ;;   :leaf-defer nil
+  ;;   :custom ((ivy-use-selectable-prompt . t)
+  ;;
+  ;;            (ivy-mode     . t)
+  ;;            (counsel-mode . t))
+  ;;   :init
+  ;;   (leaf *ivy-requirements
+  ;;     :config
+  ;;     (leaf swiper :ensure t)
+  ;;     (leaf counsel :ensure t))
+  ;;   :bind* (("C-x C-r" . counsel-recentf)
+  ;;           ("C-s" . swiper))
+  ;;
+  ;;   :config
+  ;;   (leaf *other-ivy-packages
+  ;;     :config
+  ;;     (leaf ivy-hydra
+  ;;       :doc "Additional key bindings for Ivy"
+  ;;       :ensure t
+  ;;       :bind (("C-c i i" . hydra-ivy/body)))
+  ;;
+  ;;     (leaf ivy-xref
+  ;;       :doc "Ivy interface for xref results"
+  ;;       :when (version<= "25.1" emacs-version)
+  ;;       :ensure t
+  ;;       :custom ((xref-show-xrefs-function . #'ivy-xref-show-xrefs)))))
+#+END_SRC
+

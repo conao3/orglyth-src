@@ -1,0 +1,52 @@
+#+title: leaf.el Overview
+#+author: conao3
+#+date: <2019-09-05 Thu 21:22>
+
+~leaf.el~ は yet another [[https://github.com/jwiegley/use-package][use-package]] です。
+
+~leaf~ は私が2.5年間で経験した ~use-package~ に関するストレスを解決します。
+
+私は ~use-package~ に対して、デベロッパとして「簡潔な内部表現」、そしてユーザーとして「一貫した使用法のキーワード」を求めました。
+しかしこの2つの多大なメリットは後方互換性を失うため、本家の ~use-package~ にマージされない可能性が高いものでした。
+そのため私は yet another ~use-package~ をスクラッチから開発し、またそれをコミュニティに公開し、あなたと一緒にハックできるようにしました。
+
+さらにスクラッチから開発するにあたって、付加価値としてEmacs-22から動作するようにしました。
+これは化石のようなEmacs-22でも、最新のEmacsでも同じinit.elを読み込めるようにするために必要でした。
+もしあなたが一つのバージョンでしか動作しないinit.elを書いているなら、
+~leaf~ を使うことで、いろんなバージョンやOSでのEmacs設定を集約できる可能性があります。
+
+また簡潔な内部表現はキーワードを追加する障壁を多分に低くしました。
+現在 ~leaf~ と ~leaf-keywords~ は下記の豊富なキーワードを持っています。
+
+#+begin_src emacs-lisp
+  (leaf-available-keywords)
+  ;; => (:disabled
+  ;;     :leaf-protect
+  ;;     :load-path
+  ;;     :leaf-autoload
+  ;;     :doc :file :url
+  ;;     :defun :defvar
+  ;;     :preface
+  ;;     :when :unless :if
+  ;;     :ensure :package :straight :el-get
+  ;;     :after
+  ;;     :commands
+  ;;     :bind :bind*
+  ;;     :mode :interpreter :magic :magic-fallback :hook
+  ;;     :advice :advice-remove
+  ;;     :hydra :combo :combo* :smartrep :smartrep* :chord :chord*
+  ;;     :leaf-defer
+  ;;     :pre-setq :pl-pre-setq
+  ;;     :init
+  ;;     :require
+  ;;     :custom :custom-face :pl-custom
+  ;;     :setq :setq-default :pl-setq :pl-setq-default
+  ;;     :diminish :delight
+  ;;     :config)
+#+end_src
+
+Emacsパッケージの設定を宣言的に書けるようにするために、 ~leaf~ のキーワード文化に則った豊富なキーワードが用意されていることは
+~use-package~ との比較として、分かりやすいアドバンテージの一つです。
+
+* インストール
+
