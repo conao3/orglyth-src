@@ -1,0 +1,53 @@
+#+title: leaf.el Overview
+#+author: conao3
+#+date: <2019-09-05 Thu 21:22>
+
+~leaf.el~ is yet another [[https://github.com/jwiegley/use-package][use-package]].
+
+~leaf~ solves the stress that I feel while using the ~use-package~ for 2.5 years.
+By developing from scratch, we have a cleaner and more predictable than ~use-package~.
+
+This makes it easy to maintain and add new keywords. (see [[https://github.com/conao3/leaf-keywords.el][leaf-keywords.el]])
+
+~leaf~ has keywords almost identical to ~use-package~, but some of usage of the keywords is different.
+
+The quickest way to solve problem is using ~macroexpand-1~ to see the unfolded result if it is not what you intended.
+And also there are also a number of samples in this README and more in the [[https://github.com/conao3/leaf.el/blob/master/leaf-tests.el][test file]].
+
+In addition, since it works with Emacs-23, you can use your usual init.el as usual,
+even if you are temporarily using fossil-like Emacs on loan.
+
+(Of course, there are not many packages that work perfectly with Emacs-23.
+These packages will be installed by the package manager and will probably report an error.
+
+~leaf~ processes this and cancels the configuration for that package.
+It then attempts to process the next package.)
+
+Currently, ~leaf.el~ and ~leaf-keywords.el~ has below rich keywords.
+
+#+begin_src emacs-lisp
+  (leaf-available-keywords)
+  ;; => (:disabled
+  ;;     :leaf-protect
+  ;;     :load-path
+  ;;     :leaf-autoload
+  ;;     :doc :file :url
+  ;;     :defun :defvar
+  ;;     :preface
+  ;;     :when :unless :if
+  ;;     :ensure :package :straight :el-get
+  ;;     :after
+  ;;     :commands
+  ;;     :bind :bind*
+  ;;     :mode :interpreter :magic :magic-fallback :hook
+  ;;     :advice :advice-remove
+  ;;     :hydra :combo :combo* :smartrep :smartrep* :chord :chord*
+  ;;     :leaf-defer
+  ;;     :pre-setq :pl-pre-setq
+  ;;     :init
+  ;;     :require
+  ;;     :custom :custom-face :pl-custom
+  ;;     :setq :setq-default :pl-setq :pl-setq-default
+  ;;     :diminish :delight
+  ;;     :config)
+#+end_src
