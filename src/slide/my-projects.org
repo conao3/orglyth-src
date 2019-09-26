@@ -1,0 +1,335 @@
+#+title: 作ったElispパッケージとその展望
+#+subtitle: leaf.el, seml-mode.el, flylint.el
+#+author: 山下 直哉 (@conao3)
+#+date: 2019-09-28
+#+tags: emacs, lisp, leaf.el, seml-mode.el, flylint.el
+
+#+reveal_root: ../
+
+#+reveal_miscinfo: 東京Emacs勉強会 - 菊の節句 at LINE株式会社
+#+options: toc:1 num:nil
+#+options: reveal_control:nil reveal_width:1200 reveal_height:800
+
+* init                                                             :noexport:
+#+begin_src emacs-lisp
+  (unless (file-directory-p "~/dev/forks/reveal.js/slide")
+    (shell-command "ln -s ../../repos/orglyth-src/src/slide/"))
+
+  (let ((default-directory "~/dev/forks/reveal.js"))
+    (shell-command "npm install && npm start &"))
+
+  (browse-url "http://localhost:8000/slide/")
+#+end_src
+
+#+RESULTS:
+: #<process open http://localhost:8000/slide/>
+
+* はじめに
+** 自己紹介
+- 山下 直哉 (conao3)
+- 学業
+  - 広島大学工学部第2類@@html:<br />@@量子材料科学研究室 4年生
+    - 金基板上の自己組織化ナノ構造の計測/評価
+- 趣味
+  - Emacsのパッケージ開発
+  - 資格取得（応用情報(AP) / CCNP / 高校教員免許(情報)）
+  - GitHubに草を生やす
+
+** GitHubの草
+[[./images/github.png]]
+
+** 普段、Emacsをどんなことに使っていますか？
+#+REVEAL_HTML: <div style="height:100px"></div>
+#+REVEAL_HTML: <div style="font-size:2em">
+#+ATTR_REVEAL: :frag (appear)
+Emacsのために@@html:<br />@@Emacsを使っている
+
+#+REVEAL_HTML: <div style="height:30px"></div>
+#+ATTR_REVEAL: :frag (appear)
+Lisp楽しい!
+#+REVEAL_HTML: </div>
+
+** やることスタック
+- 競プロしたい！
+- 当然Emacs
+  - init.el編集
+  - ~use-package~
+    - ~leaf.el~ (use-package代替)
+      - ~cort-test.el~ (テストフレームワーク)
+      - ~feather.el~ (パッケージマネージャ)
+      - ~leaf-browser.el~ (GUIフロントエンド)
+        - ~seml-mode.el~ (HTMLテンプレートエンジン)
+  #+ATTR_REVEAL: :frag (appear)
+  - (new!) ~liskk.el~ (モダンなSKK)
+  - (new!) ~navbar.el~ (分割されないタブバー)
+  - (new!) ~flylint.el~ (リアルタイムシンタックスチェック)
+
+#+begin_notes
+つまりここに挙げたパッケージ群をちゃちゃっと開発し、どんどんスタックを ~pop~ していかないと、
+「競プロしたい！」という当初の目的まで辿り着けないという状況になっています。辛い。
+
+今回の目玉は ~flylint.el~ で、他のパッケージについても紹介することで、
+ぜひ一緒に開発する人を増やしたいという狙いがあります。複数人で開発できた方がより楽しいので。
+#+end_notes
+
+* leaf.el
+- init.elで設定するべき事柄は少ない
+  - パッケージをどこからダウンロードするのか
+  - パッケージを一時的に無効化する条件
+  - キーバインドの設定
+  - カスタマイズ変数の値の設定
+  - メジャーモードはどの拡張子で有効にするのか
+  - マイナーモードはどのメジャーモードで有効にするのか
+
+** 宣言的なinit.el編集
+- おまじない/イディオムは多い
+  - ~eval-after-load~ で読み込み順の制御をしたい
+  - ~require~ したくない \to いつ ~require~ を省略できるのか
+  - ~custom-set-variables~, ~setq~ どっち使うのか
+  - ~advice~ の定義の仕方を覚えてない
+  - init.el の途中でエラーになるけど、途中で止めたくない
+
+** use-package by jwiegley
+#+BEGIN_NOTES
+[[https://github.com/conao3/leaf.el][leaf.el]]はjwiegley氏の[[https://github.com/jwiegley/use-package][use-package]]と同様に、Emacsのinie.elで頻出のイディオムを隠蔽し、編集しやすく、そして管理しやすくするものです。
+~use-package~ はとても良く出来ていて、愛用していたのですが、問題もありました。（省略するので、別途[[https://qiita.com/conao3/items/82abfea7a4c81f946e60#use-package%25E3%2581%25AE%25E3%2581%25AB%25E4%25BB%2598%25E9%259A%258F%25E3%2581%2599%25E3%2582%258B%25E5%2595%258F%25E9%25A1%258C%25E7%2582%25B9][Qiita記事]]を参照）
+#+END_NOTES
+
+- ~:if~ ~:disabled~ で無効化しているのに読み込む
+- 新しいキーワードを追加するのが困難
+- あるパッケージだけ違うフォークをダウンロードできない
+#+ATTR_REVEAL: :frag (appear)
+- (読めない / ~funcall~, ~defalias~ の嵐)
+- (init.elをEmacs-22, 23で読み込めない)
+  - 詳しい苦悩は[[https://qiita.com/conao3/items/82abfea7a4c81f946e60][Qiita記事]]を参照
+
+#+BEGIN_NOTES
+主に最初の3つが大きな不満点でした。
+最後の点は許容できたのですが、作り直すなら縛りプレイをすることにしました。
+#+END_NOTES
+
+** leaf.el
+- 内部構造の一新
+- 圧倒的な見通しやすさ
+  - use-package: *11ファイル1800行*
+  - leaf.el: *1ファイル750行* (40%)
+- キーワード追加の簡便さ (宣言的なキーワード定義)
+- use-packageに勝る、引数入力の柔軟さ
+- leafに渡す引数の自由な評価 (変数の中身を渡せる)
+- +Emacs-22からの動作を保証+
+  - +(Docker imageが用意できないのでEmacs-22はDropするかも。。)+
+  - しました
+
+** マクロ定義
+簡単のために、次のマクロを定義
+#+begin_src emacs-lisp
+  (defmacro p (form)
+    `(progn
+       (pp (macroexpand-1 ',form))
+       nil))
+#+end_src
+
+** leafの例
+#+REVEAL_HTML: <div style="font-size:0.8em">
+#+begin_src emacs-lisp
+  (p (leaf company-quickhelp
+       :when (display-graphic-p)
+       :ensure t
+       :after company
+       :custom ((company-quickhelp-delay . 0.8))
+       :bind (:company-active-map
+              ("M-h" . company-quickhelp-manual-begin))
+       :hook ((global-company-mode-hook . company-quickhelp-mode))))
+
+  ;;=> (prog1 'company-quickhelp
+  ;;     (condition-case err
+  ;;         (progn
+  ;;           (autoload #’company-quickhelp-mode "company-quickhelp" nil t)
+  ;;           (autoload #’company-quickhelp-manual-begin "company-quickhelp" nil t)
+  ;;           (when (display-graphic-p)
+  ;;             (leaf-handler-package company-quickhelp company-quickhelp nil)
+  ;;             (eval-after-load 'company
+  ;;               '(progn
+  ;;                  (leaf-keys ((:company-active-map
+  ;;                               :package company-quickhelp
+  ;;                               ("M-h" . company-quickhelp-manual-begin))))
+  ;;                  (add-hook 'global-company-mode-hook #’company-quickhelp-mode)
+  ;;                  (custom-set-variables
+  ;;                   '(company-quickhelp-delay 0.8 "Customized with leaf in company-quickhelp block"))))))
+  ;;       (error
+  ;;        (display-warning 'leaf
+  ;;                         (format "Error in `company-quickhelp' block.  Error msg: %s"
+  ;;                                 (error-message-string err))))))
+#+end_src
+#+REVEAL_HTML: </div>
+
+** leafの独自性 - <同図像性>
+同図像性によりメイン関数を小さく出来た
+
+#+REVEAL_HTML: <div style="font-size:0.7em">
+#+BEGIN_SRC emacs-lisp
+  (defvar leaf-keywords
+    (leaf-list
+     :bind         `(,@(mapcar (lambda (elm) `(bind-keys ,@elm)) value) ,@body)
+     :bind*        `(,@(mapcar (lambda (elm) `(bind-keys* ,@elm)) value) ,@body)
+
+     :init         `(,@value ,@body)
+     :require      `(,@(mapcar (lambda (elm) `(require ',elm)) value) ,@body)
+     :config       `(,@value ,@body)
+     ...))
+
+  (defvar leaf-normarize
+    '(((memq key '(:require))
+       (let ((ret (leaf-flatten value)))
+         (if (eq nil (car ret))
+             nil
+           (delete-dups (delq nil (leaf-subst t name ret))))))
+
+      ((memq key '(:load-path :commands :after :defvar))
+       (delete-dups (delq nil (leaf-flatten value))))
+      ...))
+#+END_SRC
+#+REVEAL_HTML: </div>
+
+同図像性により、実装を *データ* として記述できる
+
+** 実装をデータとして記述するメリット
+- 細々とした条件分岐部分を切り出す
+  - 大きな流れが捉えやすくなる
+- キーワード追加の心理的障壁を減らす
+  - 新しいキーワードとその変換を追加すれば良い
+- パッケージ外からのキーワード追加
+  - 変数へのpushで可能
+  - 関数のアドバイスや再定義による混乱を防ぐ
+
+** 実装をデータとして記述するデメリット
+- バイトコンパイラの恩恵を受けられない
+  - leafはそもそもバイトコンパイル中に動作するので影響は最小限
+
+* cort-test.el
+- 軽量ユニットテストフレームワーク
+  - cort-test.el: 250行 (10%) vs ert.el: 2500行
+- 本質的な行は3行のみ。あとはオプション用の変数定義
+
+#+BEGIN_SRC emacs-lisp
+(defun cort-test-test (test)
+  (let ((_name  (nth 0 test))
+        (method (nth 1 test))
+        (expect (nth 2 test))
+        (given  (nth 3 test)))
+    (if (eq method :cort-error)
+        (eval `(condition-case err (eval ,given) (,expect t)))
+      (funcall (intern
+                (substring (symbol-name method) 1))
+               (eval given) (eval expect)))))
+#+END_SRC
+
+** テストフレームワークの仕事
+#+REVEAL_HTML: <div style="height:2em"></div>
+#+REVEAL_HTML: <div style="font-size:1.5em">
+#+ATTR_REVEAL: :frag (appear)
+*何かの式/操作* を評価/実行したとき@@html:<br />@@
+*期待する値* と *等しい* かどうか確かめる
+#+REVEAL_HTML: </div>
+#+REVEAL_HTML: <div style="height:1.5em"></div>
+#+ATTR_REVEAL: :frag (appear)
+- 結果を見やすく表示する
+- 失敗した場合、デバッグの援助となる情報を出力する
+
+#+reveal: split
+#+attr_html: :width 700px
+[[./images/cort-test.png]]
+
+** cort-deftest
+- テストの宣言を行ったときに *テストを実行してはいけない*
+- あくまでも *テストの宣言* であり、テストを保存するのみ
+- 同図像性がなかったらどうやって定義するのか。。
+
+#+BEGIN_SRC emacs-lisp
+(cort-deftest arith
+  '((:= 9   (+ 4 5))
+    (:= -1  (- 4 5))
+    (:= 20  (* 4 5))
+    (:= 0   (/ 4 5))
+    (:= 0.8 (/ 4.0 5))
+    (:= 4   (mod 4 5))))
+#+END_SRC
+
+* seml-mode.el
+- HTML用テンプレートエンジン
+- SEMLは *S-Expression Markup Language* の略
+- Emacs組み込みでHTML \to Sexpは存在したが、逆がない
+  - 作ってしまえ
+
+** SEMLファイルの例
+#+REVEAL_HTML: <div style="font-size:0.7em">
+#+BEGIN_SRC html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <title>sample page</title>
+    <link rel="stylesheet" href="sample1.css"/>
+  </head>
+  <body>
+    <h1>sample</h1>
+    <p>
+      text sample
+    </p>
+  </body>
+</html>
+#+END_SRC
+
+#+BEGIN_SRC seml
+(html ((lang . "en"))
+  (head nil
+    (meta ((charset . "utf-8")))
+    (title nil "sample page")
+    (link ((rel . "stylesheet") (href . "sample1.css"))))
+  (body nil
+    (h1 nil "sample")
+    (p nil "text sample")))
+#+END_SRC
+#+REVEAL_HTML: </div>
+
+** SEMLの利点 - 同図像性の利用
+#+attr_html: :width 900px
+[[./images/complex-seml.png]]
+
+* まとめ
+#+ATTR_REVEAL: :frag (appear)
+- 同図像性を利用することにより、Lispプログラムは
+  #+ATTR_REVEAL: :frag (appear)
+  - より理解しやすく
+  - より自由に
+  - よりパワフルになる！
+- LispプログラムがLispプログラムである利点を活かす！
+- 今日紹介したパッケージはすべてGitHubで公開
+  #+ATTR_REVEAL: :frag (appear)
+  - ぜひPRをお願いします！
+  - +できたらスターを押して頂けると、励みになります+
+
+** 補足リンク 
+#+REVEAL_HTML: <div style="font-size:0.8em">
+- [[https://github.com/conao3][Github]]
+  - [[https://github.com/conao3/leaf.el][leaf.el]] - Yet another use-package
+  - [[https://github.com/conao3/cort-test.el][cort-test.el]] - Simplify Elisp unit test framework
+  - [[https://github.com/conao3/seml-mode.el][seml-mode.el]] - Major-mode for editing SEML files
+  - [[https://github.com/conao3/feather.el][feather.el]] - Parallel thread modern Emacs package manager
+- [[https://twitter.com/conao_3][Twitter]]
+- 参考資料
+  - 東京大学 - [[http://www.jsk.t.u-tokyo.ac.jp/~inamura/lecture/download/20051205_soft3_lisp1.pdf][ソフトウェア第三 講義資料 - Lisp処理系, リスト処理]]
+  - Paren-holic - [[https://booth.pm/ja/items/1317263][3つのLisp 3つの世界]]
+  - STUART C. SHAPIRO - [[https://cse.buffalo.edu/~shapiro/Commonlisp/commonLisp.pdf][Common lisp - An Interacive approach]]
+  - Harold Abelson 他 著 和田 栄一 訳 - [[https://sicp.iijlab.net/fulltext/xcont.html][計算機プログラムの構造と解釈]]
+  - Richard Stallman 他 著 Ayatakesi 訳 - [[https://ayatakesi.github.io/lispref/24.5/elisp.html#Evaluation][GNU Emacs Lisp Reference Manual]]
+#+REVEAL_HTML: </div>
+
+* Footnotes
+[fn:1] 東京大学 - [[http://www.jsk.t.u-tokyo.ac.jp/~inamura/lecture/download/20051205_soft3_lisp1.pdf][ソフトウェア第三 講義資料 - Lisp処理系, リスト処理]]
+[fn:2] Paren-holic - [[https://booth.pm/ja/items/1317263][3つのLisp 3つの世界]]
+[fn:3] STUART C. SHAPIRO - [[https://cse.buffalo.edu/~shapiro/Commonlisp/commonLisp.pdf][Common lisp - An Interacive approach]]
+[fn:4] Harold Abelson 他 著 和田 栄一 訳 - [[https://sicp.iijlab.net/fulltext/xcont.html][計算機プログラムの構造と解釈]]
+[fn:5] Richard Stallman 他 著 Ayatakesi 訳 - [[https://ayatakesi.github.io/lispref/24.5/elisp.html#Evaluation][GNU Emacs Lisp Reference Manual]]
+
+
