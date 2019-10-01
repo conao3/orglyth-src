@@ -32,6 +32,8 @@
     - 金基板上の自己組織化ナノ構造の計測/評価
 - 趣味
   - Emacsのパッケージ開発
+    - プロジェクト一覧は[[https://www.emacswiki.org/emacs/Conao3][Emacs Wiki]]参照
+    - Author projects:12 / Co-maintainer projects:10
   - 資格取得（応用情報(AP) / CCNP / 高校教員免許(情報)）
   - GitHubに草を生やす
 
@@ -72,7 +74,7 @@ Lisp楽しい!
 ぜひ一緒に開発する人を増やしたいという狙いがあります。複数人で開発できた方がより楽しいので。
 #+end_notes
 
-* leaf.el
+* leaf.el (1/3)
 - init.elで設定するべき事柄は少ない
   - パッケージをどこからダウンロードするのか
   - パッケージを一時的に無効化する条件
@@ -98,10 +100,10 @@ Lisp楽しい!
 - ~:if~ ~:disabled~ で無効化しているのに読み込む
 - 新しいキーワードを追加するのが困難
 - あるパッケージだけ違うフォークをダウンロードできない
+- キーワードごとに与える引数のフォーマットが違う
 #+ATTR_REVEAL: :frag (appear)
 - (読めない / ~funcall~, ~defalias~ の嵐)
 - (init.elをEmacs-22, 23で読み込めない)
-  - 詳しい苦悩は[[https://qiita.com/conao3/items/82abfea7a4c81f946e60][Qiita記事]]を参照
 
 #+BEGIN_NOTES
 主に最初の3つが大きな不満点でした。
@@ -120,26 +122,17 @@ Lisp楽しい!
   - +(Docker imageが用意できないのでEmacs-22はDropするかも。。)+
   - しました
 
-** マクロ定義
-簡単のために、次のマクロを定義
-#+begin_src emacs-lisp
-  (defmacro p (form)
-    `(progn
-       (pp (macroexpand-1 ',form))
-       nil))
-#+end_src
-
 ** leafの例
 #+REVEAL_HTML: <div style="font-size:0.8em">
 #+begin_src emacs-lisp
-  (p (leaf company-quickhelp
-       :when (display-graphic-p)
-       :ensure t
-       :after company
-       :custom ((company-quickhelp-delay . 0.8))
-       :bind (:company-active-map
-              ("M-h" . company-quickhelp-manual-begin))
-       :hook ((global-company-mode-hook . company-quickhelp-mode))))
+  (leaf company-quickhelp
+    :when (display-graphic-p)
+    :ensure t
+    :after company
+    :custom ((company-quickhelp-delay . 0.8))
+    :bind (:company-active-map
+           ("M-h" . company-quickhelp-manual-begin))
+    :hook ((global-company-mode-hook . company-quickhelp-mode)))
 
   ;;=> (prog1 'company-quickhelp
   ;;     (condition-case err
@@ -205,38 +198,60 @@ Lisp楽しい!
 ** 実装をデータとして記述するデメリット
 - バイトコンパイラの恩恵を受けられない
   - leafはそもそもバイトコンパイル中に動作するので影響は最小限
+  
+** What's new? (1/4)
+- =bind-key= の =describe-personal-keybindings= 相当を実装した
+  - =M-x leaf-descrive-bindings=
+    #+REVEAL_HTML: <div style="font-size:0.5em">
+    #+begin_example
+      Key name  Command         Comments
+      --------- --------------- ---------------------
+      C-t       `other-window'  was `transpose-chars'
+      C-c f     `find-file'
+      C-x C-f   `ffap'          was `find-file'
+    #+end_example
+    #+REVEAL_HTML: </div/>
+  
+    #+attr_html: :width 1100px
+    [[./images/leaf-key-bindings.png]]
 
-* cort-test.el
+
+** What's new? (2/4)
+- 「今」見ているleafを展開する関数を実装した
+  - =M-x leaf-expand=
+    #+attr_html: :width 900px
+    [[./images/leaf-expand.png]]
+
+** What's new? (3/4)
+- 「今」見ているleafをmdで展開する関数を実装した
+  - =M-x leaf-create-issue-template=
+    #+attr_html: :width 900px
+    [[./images/leaf-expand-md.png]]
+
+** What's new? (4/4)
+- imenu-integrationを実装した (Thank's grugrutさん!)
+  - =M-x counsel-imenu=
+    #+attr_html: :width 1100px
+    [[./images/leaf-imenu.png]]
+
+* COMMENT cort-test.el
 - 軽量ユニットテストフレームワーク
   - cort-test.el: 250行 (10%) vs ert.el: 2500行
 - 本質的な行は3行のみ。あとはオプション用の変数定義
 
 #+BEGIN_SRC emacs-lisp
-(defun cort-test-test (test)
-  (let ((_name  (nth 0 test))
-        (method (nth 1 test))
-        (expect (nth 2 test))
-        (given  (nth 3 test)))
-    (if (eq method :cort-error)
-        (eval `(condition-case err (eval ,given) (,expect t)))
-      (funcall (intern
-                (substring (symbol-name method) 1))
-               (eval given) (eval expect)))))
+  (defun cort-test-test (test)
+    (let ((_name  (nth 0 test))
+          (method (nth 1 test))
+          (expect (nth 2 test))
+          (given  (nth 3 test)))
+      (if (eq method :cort-error)
+          (eval `(condition-case err (eval ,given) (,expect t)))
+        (funcall (intern (substring (symbol-name method) 1))
+                 (eval given) (eval expect)))))
 #+END_SRC
 
 ** テストフレームワークの仕事
-#+REVEAL_HTML: <div style="height:2em"></div>
-#+REVEAL_HTML: <div style="font-size:1.5em">
-#+ATTR_REVEAL: :frag (appear)
-*何かの式/操作* を評価/実行したとき@@html:<br />@@
-*期待する値* と *等しい* かどうか確かめる
-#+REVEAL_HTML: </div>
-#+REVEAL_HTML: <div style="height:1.5em"></div>
-#+ATTR_REVEAL: :frag (appear)
-- 結果を見やすく表示する
-- 失敗した場合、デバッグの援助となる情報を出力する
-
-#+reveal: split
 #+attr_html: :width 700px
 [[./images/cort-test.png]]
 
@@ -255,7 +270,7 @@ Lisp楽しい!
     (:= 4   (mod 4 5))))
 #+END_SRC
 
-* seml-mode.el
+* seml-mode.el (2/3)
 - HTML用テンプレートエンジン
 - SEMLは *S-Expression Markup Language* の略
 - Emacs組み込みでHTML \to Sexpは存在したが、逆がない
@@ -295,19 +310,76 @@ Lisp楽しい!
 ** SEMLの利点 - 同図像性の利用
 #+attr_html: :width 900px
 [[./images/complex-seml.png]]
+* flylint.el (3/3)
+flycheckの不満点、ありますか?
+** flycheck.elの問題点 - 重い
+- 一部のチェッカーが同期実行 (flycheck-package-lint)
+- 多数のフォーマットのパースをメインスレッドで行っている
+** flycheck.elの問題点 - それ自動で修正できないの?
+- Clangなどはタイポの場合、修正候補を出してくれる
+#+begin_src C
+  // main.cpp
+
+  #include <iostream>
+
+  class FooBar {
+  
+  };
+
+  int main(int argc, const char * argv[]) {
+      // insert code here...
+      std::cout << "Hello, World!\n";
+      FooBaz foobar;
+      return 0;
+  }
+#+end_src
+
+** flycheck.elの問題点 - それ自動で修正できないの?
+- Clangなどはタイポの場合、修正候補を出してくれる
+#+begin_src sh
+  conao$ clang++ -fsyntax-only main.cpp
+  main.cpp:12:5: error: unknown type name 'FooBaz'; did you mean 'FooBar'?
+      FooBaz foobar;
+      ^~~~~~
+      FooBar
+  main.cpp:5:7: note: 'FooBar' declared here
+  class FooBar {
+        ^
+  1 error generated.
+#+end_src
+#+begin_src sh
+  main.cpp     5   7 info     'FooBar' declared here (c/c++-clang)
+  main.cpp     9  14 warning  unused parameter 'argc' (c/c++-clang)
+  main.cpp     9  33 warning  unused parameter 'argv' (c/c++-clang)
+  main.cpp    12   5 error    unknown type name 'FooBaz'; did you mean 'FooBar'? (c/c++-clang)
+#+end_src
+
+** flycheckの動作
+#+attr_html: :width 1100px
+[[./images/flycheck.png]]
+
+** flylint.elの動作イメージ (開発中)
+#+attr_html: :width 1100px
+[[./images/flylint-image.png]]
+
+** flylint.elの情報伝達
+- flycheck
+  - linter(非同期) $\xrightarrow{line\_data, XML, JSON}$ Emacs (メインスレッド)
+- flylint
+  - linter(非同期) $\xrightarrow{line\_data, XML, JSON}$ Emacs(非同期) $\xrightarrow{SEML}$ Emacs (メインスレッド)
+  - SEML形式はEmacsで直接 =read= 出来る
 
 * まとめ
 #+ATTR_REVEAL: :frag (appear)
 - 同図像性を利用することにより、Lispプログラムは
-  #+ATTR_REVEAL: :frag (appear)
   - より理解しやすく
   - より自由に
-  - よりパワフルになる！
+  - よりパワフルになる
+  - そしてより連携しやすくなる!
 - LispプログラムがLispプログラムである利点を活かす！
 - 今日紹介したパッケージはすべてGitHubで公開
-  #+ATTR_REVEAL: :frag (appear)
-  - ぜひPRをお願いします！
-  - +できたらスターを押して頂けると、励みになります+
+  - 一緒に作りましょう!!
+  - できたらスターを押して頂けると、励みになります
 
 ** 補足リンク 
 #+REVEAL_HTML: <div style="font-size:0.8em">
@@ -316,7 +388,8 @@ Lisp楽しい!
   - [[https://github.com/conao3/cort-test.el][cort-test.el]] - Simplify Elisp unit test framework
   - [[https://github.com/conao3/seml-mode.el][seml-mode.el]] - Major-mode for editing SEML files
   - [[https://github.com/conao3/feather.el][feather.el]] - Parallel thread modern Emacs package manager
-- [[https://twitter.com/conao_3][Twitter]]
+  - [[https://github.com/conao3/flylint.el][flylint.el]] - Yet another fly-check
+- [[https://twitter.com/conao_3][Twitter - conao3]]
 - 参考資料
   - 東京大学 - [[http://www.jsk.t.u-tokyo.ac.jp/~inamura/lecture/download/20051205_soft3_lisp1.pdf][ソフトウェア第三 講義資料 - Lisp処理系, リスト処理]]
   - Paren-holic - [[https://booth.pm/ja/items/1317263][3つのLisp 3つの世界]]
