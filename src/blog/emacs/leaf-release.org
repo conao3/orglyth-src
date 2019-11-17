@@ -1606,7 +1606,7 @@ leafはEmacs標準添付を目指しているので、PRを採用する際には
   
 ** 困ったことについて
 なにかバグや改善すべきことがあれば、気軽にGitHubでissueを開いてもらえればと思います。
-しかし、「そもそもissueを開く問題なのか」が分からなかったり、「もっと気軽に相談したい」ということがあれば[[https://conao3-support.slack.com/join/shared_invite/enQtNjUzMDMxODcyMjE1LWUwMjhiNTU3Yjk3ODIwNzAxMTgwOTkxNmJiN2M4OTZkMWY0NjI4ZTg4MTVlNzcwNDY2ZjVjYmRiZmJjZDU4MDE][専用のSlack]]を用意しているので、そちらで連絡をとれればと思います。
+しかし、「そもそもissueを開く問題なのか」が分からなかったり、「もっと気軽に相談したい」ということがあれば[[https://join.slack.com/t/conao3-support/shared_invite/enQtNjUzMDMxODcyMjE1LTA4ZGRmOWYwZWE3NmE5NTkyZjk3M2JhYzU2ZmRkMzdiMDdlYTQ0ODMyM2ExOGY0OTkzMzZiMTNmZjJjY2I5NTM][専用のSlack]]を用意しているので、そちらで連絡をとれればと思います。
 
 これが日本人が作っているパッケージの強みでもあるので、ぜひ初心者の方でも気軽に ~leaf~ を使ってもらえればと思います。
 
