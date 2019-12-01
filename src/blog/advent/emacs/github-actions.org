@@ -1,4 +1,4 @@
-#+title: 「GitHub Actions」で依存関係をスマートに解決する方法
+#+title: 依存関係をスマートに解決しつつ「GitHub Actions」でCIを無料でぶん回す
 #+author: conao3
 #+date: <2019-11-30 Sat>
 #+options: ^:{}
@@ -6,9 +6,10 @@
 * Config                                                           :noexport:
 
 * tl;dr
-- =run:= セクションではPATHの追加は出来ない。
+- =run:= セクションでは一時的なPATHの追加しか出来ない。
 - ワークフローに依存関係がある場合、 =setup-*= を作ると簡単に解決できる。
-- =setup-*= を作るのは簡単
+- [[https://github.com/conao3/setup-cask][setup-cask]]を作った!
+- 「GitHub Actions」便利なので、みんな使おう!
 
 * GitHub Actionsについて
 「GitHub Actions」は2018/10/16に発表[fn:1]され、2019/11/13に正式リリース[fn:2]されました。
@@ -16,14 +17,316 @@
 当初はブロックを繋いでワークフローを作っていました[fn:1]が、現在ではYAMLでのワークフロー定義[fn:3]になり
 開発者にとって、再利用しやすく、簡潔にワークフローを定義できるようになりました。
 
-パブリックレポジトリであれば、並列数20でLinux, macOS, Windowsが無料で使え、有効化は =.git/workflows/test.yml=
+パブリックレポジトリであれば、並列数20でLinux, macOS, Windowsが無料で使え、有効化は =.github/workflows/test.yml=
 にワークフローの定義を書いて =push= するだけです。
 
 さらに、体感ですが、Travis CIよりJobの起動が早い気がします。バックエンドとしてGCPでなくAzureを使っている影響かもしれません。
 
-Emacs畑でも、MELPAの管理をしているpurcelさんが[[https://github.com/purcell/setup-emacs][setup-emacs]]を作成したりと盛り上がっています。
+Emacs畑でも、MELPAの管理をしているpurcelさんがActionsでEmacsが使えるようにする、[[https://github.com/purcell/setup-emacs][setup-emacs]]を作成したりと盛り上がっています。
 
+* 出来上がったもの
+完成形を示します。新しいプロジェクトでActionsを使うときは、下記手順を踏むことで簡単に複数バージョンでのCIが走ります。すごい!!
 
+1. 下記スニペットを ~.github/workflows/test.yml~ で保存する。([[https://github.com/flylint/flylint/blob/master/.github/workflows/test.yml][ファイル]])
+   #+begin_src yaml
+     name: Main workflow
+     on: [push]
+
+     jobs:
+       build:
+         runs-on: ubuntu-latest
+         strategy:
+           matrix:
+             emacs_version:
+               - '26.1'
+               - '26.2'
+               - '26.3'
+               - 'snapshot'
+             include:
+               - emacs_version: 'snapshot'
+                 allow_failure: true
+         steps:
+         - uses: actions/checkout@v1
+         - uses: actions/setup-python@v1.1.1
+         - uses: purcell/setup-emacs@master
+           with:
+             version: ${{ matrix.emacs_version }}
+         - uses: conao3/setup-cask@master
+
+         - name: Run tests
+           if: matrix.allow_failure != true
+           run: 'make test'
+
+         - name: Run tests (allow failure)
+           if: matrix.allow_failure == true
+           run: 'make test || true'
+   #+end_src
+2. CommitしてGitHubにPush
+3. 自動でActionsがキックされ、CIが回る。([[https://github.com/flylint/flylint/commit/eba699022622cb9a3300e000c8e6106b3601c4b5/checks?check_suite_id=335468421][ログ]])
+
+* setup-caskの作成
+** setup-caskがなぜ必要なのか
+今回例に挙げたプロジェクトは ~Emacs~, ~Cask~ (~Python~) に依存しており、CIを回すためにはそれらのソフトウェアをどうにかして動くようにする必要があります。
+
+しかし、EmacsとPythonにはそれぞれ ~setup-emacs~, ~setup-python~ が用意されていましたが、Cask用の ~setup-cask~ を作っている人がいませんでした。
+
+Caskのインストールは簡単で、 ~cask/cask~ をホームディレクトリに ~.cask~ としてCloneしてPATHを通すだけです。
+このようにインストールする野良ソフトは多いと思いますが、GitHub Actionsでは動きません。PATHの変更が *一つのステージしか適用されない* からです。
+
+確認のため、次の ~test.yml~ でActionsを動かします。
+#+begin_src yaml
+  name: Main workflow
+  on: [push]
+
+  jobs:
+    build:
+      runs-on: ubuntu-latest
+      steps:
+      - uses: actions/checkout@v1
+      - name: Echo path
+        run: echo $PATH
+
+      - uses: actions/setup-python@v1.1.1
+
+      - name: Add path
+        run: export PATH="$HOME/.cask/bin:$PATH"; echo $PATH
+      - name: Echo path
+        run: echo $PATH
+#+end_src
+
+ログは次のようになりました。([[https://github.com/conao3/playground/commit/72b504ff0ee417378809442231b6996b22e1a102/checks?check_suite_id=336251823][Raw]])
+- Set up job
+- Set up job
+- Run actions/checkout@v1
+- Echo path
+  #+begin_src shell
+    /usr/share/rust/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin~
+  #+end_src
+
+- Run echo $PATH
+  #+begin_src shell
+    /usr/share/rust/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin~
+  #+end_src
+
+- Run actions/setup-python@v1.1.1
+  #+begin_src shell
+    Added matchers: 'python'. Problem matchers scan action output for known warning or error strings and report these inline.
+  #+end_src
+
+- Add path
+  #+begin_src shell
+    /home/runner/.cask/bin:/opt/hostedtoolcache/Python/3.8.0/x64/bin:/opt/hostedtoolcache/Python/3.8.0/x64:/usr/share/rust/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+  #+end_src
+
+- Run export PATH="$HOME/.cask/bin:$PATH"; echo $PATH
+  #+begin_src shell
+    /home/runner/.cask/bin:/opt/hostedtoolcache/Python/3.8.0/x64/bin:/opt/hostedtoolcache/Python/3.8.0/x64:/usr/share/rust/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+  #+end_src
+
+- Echo path
+  #+begin_src shell
+    /opt/hostedtoolcache/Python/3.8.0/x64/bin:/opt/hostedtoolcache/Python/3.8.0/x64:/usr/share/rust/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+  #+end_src
+
+- Run echo $PATH
+  #+begin_src shell
+    /opt/hostedtoolcache/Python/3.8.0/x64/bin:/opt/hostedtoolcache/Python/3.8.0/x64:/usr/share/rust/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+  #+end_src
+
+- Complete job
+
+このように ~Add path~ で追加した ~home/runner.cask/bin/~ が次のステージでは消えてしまっています。
+しかし、 ~setup-python~ によって追加されたPython関連のPATHは次のステージでも保存されていることが分かると思います。
+
+そのため ~setup-cask~ を作成する必要がありました。
+
+** setup-caskの作成
+今回作成した ~setup-cask~ は[[https://github.com/conao3/setup-cask][こちら]]に置いてあります。
+
+まず[[https://github.com/actions/setup-python][setup-python]]をフォークし、それとpurcelさんの[[https://github.com/purcell/setup-emacs][setup-emacs]]と見比べながら作成しました。
+
+なおCask本体はバージョニングされていますが、依存関係のバージョニングはされておらず、常に最新版に依存することになっています。
+そのためキャッシュ機能を省くことにしました。結果として簡単にPython用の ~setup-python~ からCask用に変換することができました。
+
+本体は ~src/main.ts~ です。CaskのReleaseページからzipを落として、解凍し、PATHを通すだけです。
+
+#+begin_src typescript
+  import * as core from '@actions/core';
+  import * as exec from '@actions/exec';
+  import * as io from '@actions/io';
+  import * as path from 'path';
+  import * as os from 'os';
+
+  async function run() {
+    try {
+      const version =
+        core.getInput('version') == 'snapshot'
+          ? 'master'
+          : core.getInput('version');
+      const archive_name =
+        core.getInput('version') == 'snapshot' ? 'master.zip' : `v${version}.zip`;
+      const home = os.homedir();
+      const tmp = os.tmpdir();
+
+      core.startGroup('Fetch Cask');
+      await exec.exec('curl', [
+        '-L',
+        `https://github.com/cask/cask/archive/${archive_name}`,
+        '-o',
+        `${tmp}/${archive_name}`
+      ]);
+      await exec.exec('unzip', [`${tmp}/${archive_name}`, '-d', `${tmp}`]);
+      const options = {recursive: true, force: false};
+      await io.mv(`${tmp}/cask-${version}`, `${home}/.cask`, options);
+      core.addPath(`${home}/.cask/bin`);
+      core.endGroup();
+
+      core.startGroup('Install dependency');
+      await exec.exec('cask', ['--version']);
+      core.endGroup();
+
+      // show Cask version
+      await exec.exec('cask', ['--version']);
+    } catch (err) {
+      core.setFailed(err.message);
+    }
+  }
+
+  run();
+#+end_src
+
+Actionsに依存した処理については[[https://github.com/actions/toolkit][actions/toolkit]]にあるライブラリを使用することができます。
+~actions/toolkit~ はさらに以下のツールによって構成されています。
+- [[https://github.com/actions/toolkit/blob/master/packages/core][@actions/core]]
+- [[https://github.com/actions/toolkit/blob/master/packages/exec][@actions/exec]]
+- [[https://github.com/actions/toolkit/blob/master/packages/io][@actions/io]]
+- [[https://github.com/actions/toolkit/blob/master/packages/tool-cache][@actions/tool-cache]]
+- [[https://github.com/actions/toolkit/blob/master/packages/github][@actions/github]]
+
+~core.startGroup~ と ~core.endGroup~ で囲んだところのログは折り畳み表示されます。
+しかしセットアップの最後でバージョンを表示する際はグループで囲わない方が出力が見やすいと思います。
+
+* 使用例
+~setup-cask~ はEmacsとPythonに依存しています。
+つまり ~setup-cask~ を実行する前に ~setup-emacs~ と ~setup-python~ を ~uses:~ セクションとして記述する必要があります。
+
+この設計により、 ~setup-cask~ としてはCaskのバージョンのみ受け取ればよく、考えることを減らせます。
+
+** Basic testing
+#+begin_src yaml
+  jobs:
+    build:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v1
+        - uses: actions/setup-python@v1.1.1
+          with:
+            python-version: '3.6'
+            architecture: 'x64'
+        - uses: purcell/setup-emacs@master
+          with:
+            version: '26.3'
+
+        - uses: conao3/setup-cask@master
+          with:
+            version: 'snapshot'
+
+        - name: Run tests
+          run: make test
+#+end_src
+この例ではElispパッケージは次の環境でテストされます。
+- Emacs: ~26.3~
+- Python: ~3.6 (x64)~
+- Cask: ~snapshot~ (HEAD)
+
+** Matrix testing
+#+begin_src yaml
+  jobs:
+    build:
+      runs-on: ubuntu-latest
+      strategy:
+        matrix:
+          emacs_version:
+            - '26.1'
+            - '26.2'
+            - '26.3'
+            - 'snapshot'
+          cask_version:
+            - '0.8.0'
+            - '0.8.4'
+            - 'snapshot'
+      steps:
+        - uses: actions/checkout@v1
+        - uses: actions/setup-python@v1.1.1
+          with:
+            python-version: '3.6'
+            architecture: 'x64'
+        - uses: purcell/setup-emacs@master
+          with:
+            version: '26.3'
+
+        - uses: conao3/setup-cask@master
+          with:
+            version: 'snapshot'
+
+        - name: Run tests
+          run: make test
+#+end_src
+
+この例ではElispパッケージは次の環境でテストされます。
+- Emacs: ~26.1~, ~26.2~, ~26.3~
+- Python: ~3.6 (x64)~
+- Cask: ~0.8.0~, ~0.8.4~, ~snapshot~ (HEAD)
+
+** Simplest testing
+#+begin_src yaml
+  jobs:
+    build:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v1
+        - uses: actions/setup-python@v1.1.1
+        - uses: purcell/setup-emacs@master
+          with:
+            version: '26.3'
+        - uses: conao3/setup-cask@master
+
+        - name: Run tests
+          run: make test
+
+#+end_src
+
+この例ではElispパッケージは次の環境でテストされます。
+- Emacs: ~26.3~
+- Python: ~3.x (x64)~
+- Cask: ~snapshot~ (HEAD)
+
+PythonとCaskのバージョンを明示的に指定していません。
+
+明示的に指定しなかった場合の処理は各setupの実装に依存しますが、
+~setup-python~ ではVersionとして ~3.x~, Architectureとして ~x64~ が指定されたものとして処理されます。 (see [[https://github.com/actions/setup-python/blob/master/action.yml][setup-python/action.yml]])
+
+~setup-cask~ ではVersionとして ~snapshot~ が指定されたものとして処理されます。 (see [[https://github.com/conao3/setup-cask/blob/master/action.yml][setup-cask/action.yml]])
+
+~setup-emacs~ でもバージョン指定を省略したいのですが、[[https://github.com/purcell/setup-emacs/pull/1][PRを出したところ]]却下されました。そのためEmacsのバージョンは明示的に指定する必要があります。
+
+* まとめ
+MSの資金力によってどんどんGitHubの機能が増えていきますね。
+パブリックレポジトリに限定されますが、並列数20でLinux, macOS, Windowsが無料で使えるのは驚異的です。
+
+なお、「GitHub Actions」は発表当初、バッジが用意されていないとしてショックなニュースになっていましたが、現在では[[https://help.github.com/en/actions/automating-your-workflow-with-github-actions/configuring-a-workflow#adding-a-workflow-status-badge-to-your-repository][用意されています]]。
+
+さらにShields.ioでも先週[[https://github.com/badges/shields/pull/3898][バッジリクエストがマージ]]され、使えるようになりました。
+#+begin_example
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">We now support badges for <a href="https://twitter.com/hashtag/GitHub?src=hash&amp;ref_src=twsrc%5Etfw">#GitHub</a> Actions, allowing you to display the status of your workflows (e.g. <a href="https://t.co/xfHbwoLqpx">https://t.co/xfHbwoLqpx</a>). Thanks calebcartwright for the implementation! Don&#39;t waste a minute, start adding them to your Readmes! 🚀</p>&mdash; Shields (@Shields_io) <a href="https://twitter.com/Shields_io/status/1200540112368611328?ref_src=twsrc%5Etfw">November 29, 2019</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+#+end_example
+
+GitHubのバッジより豊富なスタイル指定ができることが特徴です。詳細は[[https://shields.io/][shields.io]]を参照してください。
+
+また、[[https://www.patreon.com/conao3][Patreon]]でご支援を頂ける方を募集しています。
+普段はElispパッケージなどを中心にOSS活動をしつつ、学生をしています。ぜひよろしくお願いします。
+
+https://www.patreon.com/conao3
 
 * Footnotes
 [fn:1] GitHubが「GitHub Actions」を発表、開発者が好きな機能を使ってワークフローを自動化 - https://www.atmarkit.co.jp/ait/articles/1810/17/news067.html
