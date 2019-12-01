@@ -1,0 +1,32 @@
+#+title: 「GitHub Actions」で依存関係をスマートに解決する方法
+#+author: conao3
+#+date: <2019-11-30 Sat>
+#+options: ^:{}
+
+* Config                                                           :noexport:
+
+* tl;dr
+- =run:= セクションではPATHの追加は出来ない。
+- ワークフローに依存関係がある場合、 =setup-*= を作ると簡単に解決できる。
+- =setup-*= を作るのは簡単
+
+* GitHub Actionsについて
+「GitHub Actions」は2018/10/16に発表[fn:1]され、2019/11/13に正式リリース[fn:2]されました。
+
+当初はブロックを繋いでワークフローを作っていました[fn:1]が、現在ではYAMLでのワークフロー定義[fn:3]になり
+開発者にとって、再利用しやすく、簡潔にワークフローを定義できるようになりました。
+
+パブリックレポジトリであれば、並列数20でLinux, macOS, Windowsが無料で使え、有効化は =.git/workflows/test.yml=
+にワークフローの定義を書いて =push= するだけです。
+
+さらに、体感ですが、Travis CIよりJobの起動が早い気がします。バックエンドとしてGCPでなくAzureを使っている影響かもしれません。
+
+Emacs畑でも、MELPAの管理をしているpurcelさんが[[https://github.com/purcell/setup-emacs][setup-emacs]]を作成したりと盛り上がっています。
+
+
+
+* Footnotes
+[fn:1] GitHubが「GitHub Actions」を発表、開発者が好きな機能を使ってワークフローを自動化 - https://www.atmarkit.co.jp/ait/articles/1810/17/news067.html
+[fn:2] モバイルアプリ版GitHub発表、GitHub Actions正式リリース、コードアーカイブ…GitHubの多面性が見えたGitHub Universe Keynote - https://codezine.jp/article/detail/11818
+[fn:3] GitHub Actions now supports CI/CD, free for public repositories - https://github.blog/2019-08-08-github-actions-now-supports-ci-cd/ 
+
