@@ -1,0 +1,46 @@
+#+title: 魔改造によってSolarized.elがEmacs最強のカラーテーマになってしまった件
+#+author: conao3
+#+date: <2019-12-02 Mon>
+#+options: ^:{}
+
+* Config                                                           :noexport:
+
+* はじめに
+この記事は「Emacs Advent Calendar 2019」の3日目の記事として書いたのです。
+昨日は私の「[[https://qiita.com/conao3/items/db06dc1338aaf8e9b7b1][{2019年アップデート} leaf.elで雑然としたEmacs設定ファイル「init.el」をクリーンにする]]」でした。
+
+まだ空きがあるので、ぜひ参加頂ければと思います!
+
+* Emacsのカラーテーマについて
+Emacsは「An extensible, customizable, free/libre text editor」です。
+その中でカラーテーマはプログラマの個性が一番出る所で、Emacsも当然 *細かく* 設定できます。
+
+。。。しかし、細かすぎるのです。そして細かすぎるがゆえにどうやって好みの色にしていくのか設定箇所も多岐に渡ります。
+
+その状況をどのように脱却するかについて @zk-phi さんが興味深い考察と実践をされています。
+- [[%E3%82%AB%E3%83%A9%E3%83%BC%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%A0%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%A0%E3%81%A8%E3%81%97%E3%81%A6%E3%81%AE%E3%82%AB%E3%83%A9%E3%83%BC%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%A0][{Emacs} メタ・カラースキームとしての solarized]]
+- [[%E3%82%AB%E3%83%A9%E3%83%BC%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%A0%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%A0%E3%81%A8%E3%81%97%E3%81%A6%E3%81%AE%E3%82%AB%E3%83%A9%E3%83%BC%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%A0][カラースキームスキームとしてのカラースキーム]]
+
+そのアイデアを元にsolarized-emacsに[[https://github.com/bbatsov/solarized-emacs/pull/330][PRを送り]]、無事(大小の衝突がありつつ、、)マージされました。
+
+この記事はsolarizedにマージされた、この新しい機能をどうやって使うのかについて解説をするものです。
+
+* Emacsのカラーテーマの仕事
+Emacsのカラーテーマの仕事は多くありません。
+下記はカラーテーマのテンプレートです。
+
+1. =deftheme= によってテーマの名前を宣言し、
+2. =custom-theme-set-faces= と =custom-set-variables= によってフェイスと変数の設定を行い、
+3. =provide-theme= と =provide= を実行し、Emacsから利用できるようにする。
+
+しかし2.の手順がとても面倒なのです。
+
+Emacs24のときに現在のテーマの仕組みが導入され、以前のcolor-theme.elから移行する必要があったとき、
+emacs-jpの有志によって大量のカラーテーマが変換されました。(ここの経緯はよく分かりませんが。。)
+
+そのカラーテーマ群は[[https://github.com/emacs-jp/replace-colorthemes][emacs-jp/replace-colorthemes]]に置いてあり、MELPAから =color-theme-modern= というパッケージ名でインストールできます。
+
+その中の数テーマを眺めてもらえれば、テーマによって =custom-theme-set-faces= と =custom-set-variables= の充実度合いが違うことに気づくと思います。
+
+
+
