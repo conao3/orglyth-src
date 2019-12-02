@@ -1,9 +1,16 @@
-#+title: [2019年アップデート]leaf.elで雑然としたEmacs設定ファイル「init.el」をクリーンにする
+#+title: [2019年アップデート] leaf.elで雑然としたEmacs設定ファイル「init.el」をクリーンにする
 #+author: conao3
-#+date:
+#+date: <2019-12-02 Mon>
 #+options: ^:{}
 
 * Config                                                           :noexport:
+
+* はじめに
+この記事は「[[https://qiita.com/advent-calendar/2019/emacs][Emacs Advent Calendar 2019]]」の2日目の記事として書いたものです。
+昨日は私の「[[https://qiita.com/conao3/items/d7f079f30df8a123731d][依存関係をスマートに解決しつつ「GitHub Actions」でCIを無料でぶん回す]]」でした。
+
+まだ空きがあるので、ぜひ参加頂ければと思います!
+
 * leafについて
 [[https://github.com/conao3/leaf.el][leaf.el]]はjwiwgleyさんの[[https://github.com/jwiegley/use-package][use-package]]を2.5年使った上で、私が感じていたストレスを解消するためにスクラッチから開発したパッケージです。
 Qiitaでもプレリリースとリリース時に記事を書きましたが、半年経つと新機能も増えてきます。
@@ -182,6 +189,7 @@ leaf.elをEmacs本体に入れるという野望のために分けてありま�
 - [[https://github.com/conao3/leaf-keywords.el/issues/64][#64 Remove straight from auto require packages]]
 - [[https://github.com/conao3/leaf-keywords.el/issues/67][#67 update slack url]]
 - [[https://github.com/conao3/leaf-keywords.el/issues/69][#69 Use Github Action instead of travis]]
+
 *** Pull request
 - [[https://github.com/conao3/leaf-keywords.el/pull/70][#70 feature#69]]
 - [[https://github.com/conao3/leaf-keywords.el/pull/68][#68 feature#67]]
@@ -211,7 +219,7 @@ https://user-images.githubusercontent.com/1414646/62849101-4ae71100-bd19-11e9-85
 こうします。
 https://user-images.githubusercontent.com/1414646/62849109-520e1f00-bd19-11e9-9219-51879b513cbb.png
 
-use-packageにもあるみたいですが、どうやらバグっているのようなので、leaf.elでしか使えません。
+use-packageにもあるみたいですが、どうやらバグっているとのことなので、leaf.elでしか使えません。
 便利すぎるので、デフォルトでオンにしてあります。
 
 そもそもEmacsには[[https://ayatakesi.github.io/emacs/temp/html/Imenu.html][imenuという機能]]があり、 ~M-x imenu~ で起動できます。
@@ -281,7 +289,7 @@ use-packageにもあるみたいですが、どうやらバグっているのよ
 しかし、use-packageでは単にbufferにフォーマットされた文字列を表示するだけですが、
 ~leaf-key-describe-bindings~ ではEmacsビルドインの表データ表示ライブラリ、 ~tabulated-list~ を使用して表示します。
 
-@@ image @@
+[[./img/leaf-bindlist.png]]
 
 それによって各列での昇順、降順のソートなどができることで、use-packageのそれより使いやすく/見やすくなっていると思います。
 
@@ -332,6 +340,19 @@ leafの ~leaf-expand-minimally~ の実装は ~leaf-expand-minimally-suppress-key
 
 ただ、leafの展開形を知りたいだけなら後述する ~leaf-expand~ の方が使いやすいと思います。
 
+** Add leaf expand visualization feature
+- [[https://github.com/conao3/leaf.el/issues/319][#319 Add leaf expand visualization feature]]
+
+[[./img/leaf-expand.png]]
+[[./img/leaf-expand-md.png]]
+
+~M-x leaf-expand~ と ~M-x leaf-create-issue-template~ を実装しました。
+
+~leaf-expand~ は現在のポイントから上のS式をスキャンして、一番最初に見つかったleafを ~macroexpand-1~ で展開し、新しいバッファに表示します。
+
+~leaf-create-issue-template~ はついでに実装したものです。展開前と展開後のleafをmd形式で新しいバッファに表示します。
+これをコピペすれば簡単にissueが書けるのではないかなと思います。
+
 ** Add leaf-available-keywords
 - [[https://github.com/conao3/leaf.el/issues/258][#258 Add leaf-available-keywords function]]
 - [[https://github.com/conao3/leaf.el/issues/260][#260 make leaf-avairable-keywords interacrive function]]
@@ -363,22 +384,17 @@ lispプログラムから実行すると、単に現在使用できるキーワ�
 
 ただ、やっぱり ~:hook~ や ~:mode~ では便利。
 
-** Add leaf expand visualization feature
-- [[https://github.com/conao3/leaf.el/issues/319][#319 Add leaf expand visualization feature]]
-
-~M-x leaf-expand~ と ~M-x leaf-create-issue-template~ を実装しました。
-
-~leaf-expand~ は現在のポイントから上のS式をスキャンして、一番最初に見つかったleafを ~macroexpand-1~ で展開し、新しいバッファに表示します。
-
-~leaf-create-issue-template~ はついでに実装したものです。展開前と展開後のleafをmd形式で新しいバッファに表示します。
-これをコピペすれば簡単にissueが書けるのではないかなと思います。
-
 ** Automatically require packages feature
 - [[https://github.com/conao3/leaf-keywords.el/issues/56][#56 Automatically require packages feature]]
 - [[https://github.com/conao3/leaf-keywords.el/issues/58][#58 Fix auto require feature]]
+- [[https://github.com/conao3/leaf-keywords.el/issues/64][#64 Remove straight from auto require packages]]
 
 leaf-keywords.elの追加機能です。
 leaf-keywords.elで使えるパッケージがインストールされていた場合、 ~(leaf-keywords-setup)~ をしたときに自動でrequireするようにしました。
+
+この機能を使うには ~(leaf-keywords-setup)~ をする前に
+~el-get~, ~hydra~, ~key-combo~, ~smartrep~, ~key-chord~, ~diminish~, ~delight~
+のうちどれかをpackage.elなどでインストールしておく必要があります。
 
 ** Remove eval-after-load statement
 - [[https://github.com/conao3/leaf-keywords.el/issues/62][#62 Remove eval-after-load statement]]
@@ -412,7 +428,7 @@ leaf-keywords.elによって出力されたS式は、追加パッケージがreq
 leafは結構大きなDSL解析器になっていて、デバックも大変になってきています。
 とりあえず、テストケースは全部通ることを確認しているので、見つけ次第追加していくしかないですね。。
 
-
+なお、Readmeや私が書くleafの記事で紹介しているものはテストケースから抜き出したものなので、動くことが保証されています。
 
 ** Fix install code
 - [[https://github.com/conao3/leaf.el/issues/274][#274 fix install code]]
@@ -478,16 +494,14 @@ Readmeにおいて ~leaf~ のダウンロードに失敗したら ~package-refre
         (leaf-keywords-init)))
   #+end_src
 
-
 ** Byte compile
 - [[https://github.com/conao3/leaf.el/issues/326][#326 Suppress byte-compiler warnings, unused lexical variable, err]]
 - [[https://github.com/conao3/leaf.el/issues/332][#332 Create :leaf-defun, auto declare function feature]]
 - [[https://github.com/conao3/leaf.el/issues/334][#334 Add :leaf-defvar keyword]]
 - [[https://github.com/conao3/leaf.el/issues/336][#336 fix :leaf-defvar expand statement]]
 
-leafを使用したinit.elをバイトコンパイルしたときにワーニングがでたので直しました。
+leafを使用したinit.elをバイトコンパイルしたときにワーニングが出たので直しました。
 バイトコンパイルについては少しコツがあるので、また別記事にするかもしれません。
-
 
 ** Do configure autoload if not have already set autoload
 - [[https://github.com/conao3/leaf.el/issues/330][#330 Do configure autoload if not have already set autoload]]
@@ -507,3 +521,13 @@ leafを使用したinit.elをバイトコンパイルしたときにワーニン
 
 なお、 ~:bind~, ~:bind*~ ではlambda式をバインドすることが[[https://github.com/conao3/leaf.el/issues/322][現状できない]]ので、 ~:preface~ で関数を宣言してバインドしてもらえればと思います。。
 
+* まとめ
+leafはIssueやPRを放置することなく、後方互換性を保った上で精力的に機能拡張を行なっています。
+ぜひこの記事や[[https://qiita.com/conao3/items/dc88bdadb0523ef95878][リリース記事]]を参考にして、leafで快適なEmacs生活を送って頂ければと思います。
+
+なお、12/18には「[[https://qiita.com/advent-calendar/2019/emacs][Emacs Advent Calendar 2019]]」の18日目の記事として @keita44_f4 さんによるleafの記事がでるようなので、それも参考にしていただければと思います。
+
+最後になりますが、Patreonでご支援を頂ける方を募集しています。
+普段はleafなどのElispパッケージなどを中心にOSS活動をしつつ、学生をしています。ぜひよろしくお願いします。
+
+https://www.patreon.com/conao3
