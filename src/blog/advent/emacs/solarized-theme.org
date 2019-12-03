@@ -21,7 +21,27 @@ Emacsは「An extensible, customizable, free/libre text editor」です。
 - [[%E3%82%AB%E3%83%A9%E3%83%BC%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%A0%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%A0%E3%81%A8%E3%81%97%E3%81%A6%E3%81%AE%E3%82%AB%E3%83%A9%E3%83%BC%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%A0][{Emacs} メタ・カラースキームとしての solarized]]
 - [[%E3%82%AB%E3%83%A9%E3%83%BC%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%A0%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%A0%E3%81%A8%E3%81%97%E3%81%A6%E3%81%AE%E3%82%AB%E3%83%A9%E3%83%BC%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%A0][カラースキームスキームとしてのカラースキーム]]
 
-そのアイデアを元にsolarized-emacsに[[https://github.com/bbatsov/solarized-emacs/pull/330][PRを送り]]、無事(大小の衝突がありつつ、、)マージされました。
+そのアイデアを元にsolarized-emacsにこれらのPRを送り、無事(大小の衝突がありつつ、、)マージされました。
+
+最初の提案
+- [[https://github.com/bbatsov/solarized-emacs/pull/330][#330 {New Feature} solarized.el as multi color scheme]]
+
+#330に関連する修正/わざと分けた修正など。
+- [[https://github.com/bbatsov/solarized-emacs/pull/342][#342 fix indentation see #330]]
+- [[https://github.com/bbatsov/solarized-emacs/pull/343][#343 Add Cask and Makefile]]
+- [[https://github.com/bbatsov/solarized-emacs/pull/345][#345 Fix package-lint warnings/error]]
+- [[https://github.com/bbatsov/solarized-emacs/pull/346][#346 Remove turning on rainbow-mode magic comment]]
+- [[https://github.com/bbatsov/solarized-emacs/pull/350][#350 Include pkg file information into solarized-theme.el]]
+- [[https://github.com/bbatsov/solarized-emacs/pull/351][#351 call color-rgb-to-hex with 3 arguments when emacs<26]]
+- [[https://github.com/bbatsov/solarized-emacs/pull/353][#353 Enable lexical-binding and some code-refactoring]]
+- [[https://github.com/bbatsov/solarized-emacs/pull/355][#355 add description to create color-theme]]
+- [[https://github.com/bbatsov/solarized-emacs/pull/361][#361 Fix wrong function name in readme]]
+- [[https://github.com/bbatsov/solarized-emacs/pull/362][#362 Fix readme for usage of child theme]]
+- [[https://github.com/bbatsov/solarized-emacs/pull/363][#363 Change user-emacs-directory in minimal-init.el]]
+- [[https://github.com/bbatsov/solarized-emacs/pull/364][#364 Fix file local variables]]
+- [[https://github.com/bbatsov/solarized-emacs/pull/367][#367 fix BODY to solarized-definition]]
+- [[https://github.com/bbatsov/solarized-emacs/pull/372][#372 Merge *color-blend-rgb to *color-blend]]
+- [[https://github.com/bbatsov/solarized-emacs/pull/373][#373 Remove solarized-color-lightness]]
 
 この記事はsolarizedにマージされた、この新しい機能をどうやって使うのかについて解説をするものです。
 
@@ -29,18 +49,175 @@ Emacsは「An extensible, customizable, free/libre text editor」です。
 Emacsのカラーテーマの仕事は多くありません。
 下記はカラーテーマのテンプレートです。
 
-1. =deftheme= によってテーマの名前を宣言し、
-2. =custom-theme-set-faces= と =custom-set-variables= によってフェイスと変数の設定を行い、
-3. =provide-theme= と =provide= を実行し、Emacsから利用できるようにする。
+1. ~deftheme~ によってテーマの名前を宣言し、
+2. ~custom-theme-set-faces~ と ~custom-set-variables~ によってフェイスと変数の設定を行い、
+3. ~provide-theme~ と ~provide~ を実行し、Emacsから利用できるようにする。
 
 しかし2.の手順がとても面倒なのです。
 
 Emacs24のときに現在のテーマの仕組みが導入され、以前のcolor-theme.elから移行する必要があったとき、
 emacs-jpの有志によって大量のカラーテーマが変換されました。(ここの経緯はよく分かりませんが。。)
 
-そのカラーテーマ群は[[https://github.com/emacs-jp/replace-colorthemes][emacs-jp/replace-colorthemes]]に置いてあり、MELPAから =color-theme-modern= というパッケージ名でインストールできます。
+そのカラーテーマ群は[[https://github.com/emacs-jp/replace-colorthemes][emacs-jp/replace-colorthemes]]に置いてあり、MELPAから ~color-theme-modern~ というパッケージ名でインストールできます。
 
-その中の数テーマを眺めてもらえれば、テーマによって =custom-theme-set-faces= と =custom-set-variables= の充実度合いが違うことに気づくと思います。
+その中の数テーマを眺めてもらえれば、テーマによって ~custom-theme-set-faces~ と ~custom-set-variables~ の充実度合いが違うことに気づくと思います。
 
+一方で[[https://github.com/bbatsov/solarized-emacs/blob/master/solarized-faces.el][solarizedのフェイス定義]]はとても充実していることが分かります。
 
+この作業は一人で管理するものではなく、逆にEmacsコミュニティで共同編集し、共有するものだと思います。
+同じようなソースがバラバラに存在するのは嘆かわしいことです。
+
+MELPAで「theme」と検索すると現在[[https://melpa.org/#/?q=theme][257パッケージがヒット]]します。それぞれにこの定義が書いてあるというのは恐ろしいと思います。管理できないし、報われない。。
+
+* solarized-zenbarn
+「Emacs Theme Gallery」から1位のzenburnをsolarizedのAPIを使って再現してみます。
+
+私も作りながら記事を書いているので、ぜひ一緒に作ってみるとどうやって使うのか分かりやすいと思います。
+
+** コアパレットの用意
+zenbarnは[[https://github.com/bbatsov/zenburn-emacs][bbatsov/zenburn-emacs]]に置かれており、色の定義は[[https://github.com/bbatsov/zenburn-emacs/blob/cf3b33c6807a6d72172a5b2164e3513c70dc7b28/zenburn-theme.el#L104-L157][こちら]]です。
+#+begin_src emacs-lisp
+  (defvar zenburn-default-colors-alist
+    '(("zenburn-fg-1"     . "#656555")
+      ("zenburn-fg-05"    . "#989890")
+      ("zenburn-fg"       . "#DCDCCC")
+      ("zenburn-fg+1"     . "#FFFFEF")
+      ("zenburn-fg+2"     . "#FFFFFD")
+      ("zenburn-bg-2"     . "#000000")
+      ("zenburn-bg-1"     . "#2B2B2B")
+      ("zenburn-bg-08"    . "#303030")
+      ("zenburn-bg-05"    . "#383838")
+      ("zenburn-bg"       . "#3F3F3F")
+      ("zenburn-bg+05"    . "#494949")
+      ("zenburn-bg+1"     . "#4F4F4F")
+      ("zenburn-bg+2"     . "#5F5F5F")
+      ("zenburn-bg+3"     . "#6F6F6F")
+      ("zenburn-red-6"    . "#6C3333")
+      ("zenburn-red-5"    . "#7C4343")
+      ("zenburn-red-4"    . "#8C5353")
+      ("zenburn-red-3"    . "#9C6363")
+      ("zenburn-red-2"    . "#AC7373")
+      ("zenburn-red-1"    . "#BC8383")
+      ("zenburn-red"      . "#CC9393")
+      ("zenburn-red+1"    . "#DCA3A3")
+      ("zenburn-red+2"    . "#ECB3B3")
+      ("zenburn-orange"   . "#DFAF8F")
+      ("zenburn-yellow-2" . "#D0BF8F")
+      ("zenburn-yellow-1" . "#E0CF9F")
+      ("zenburn-yellow"   . "#F0DFAF")
+      ("zenburn-green-5"  . "#2F4F2F")
+      ("zenburn-green-4"  . "#3F5F3F")
+      ("zenburn-green-3"  . "#4F6F4F")
+      ("zenburn-green-2"  . "#5F7F5F")
+      ("zenburn-green-1"  . "#6F8F6F")
+      ("zenburn-green"    . "#7F9F7F")
+      ("zenburn-green+1"  . "#8FB28F")
+      ("zenburn-green+2"  . "#9FC59F")
+      ("zenburn-green+3"  . "#AFD8AF")
+      ("zenburn-green+4"  . "#BFEBBF")
+      ("zenburn-cyan"     . "#93E0E3")
+      ("zenburn-blue+3"   . "#BDE0F3")
+      ("zenburn-blue+2"   . "#ACE0E3")
+      ("zenburn-blue+1"   . "#94BFF3")
+      ("zenburn-blue"     . "#8CD0D3")
+      ("zenburn-blue-1"   . "#7CB8BB")
+      ("zenburn-blue-2"   . "#6CA0A3")
+      ("zenburn-blue-3"   . "#5C888B")
+      ("zenburn-blue-4"   . "#4C7073")
+      ("zenburn-blue-5"   . "#366060")
+      ("zenburn-magenta"  . "#DC8CC3"))
+    "List of Zenburn colors.
+  Each element has the form (NAME . HEX).
+  `+N' suffixes indicate a color is lighter.
+  `-N' suffixes indicate a color is darker.")
+#+end_src
+
+ここから、下記の色を抜き出します。
+- 最暗色・最明色
+- ハイライト8色 (~yellow~ ~orange~ ~red~ ~magenta~ ~violet~ ~blue~ ~cyan~ ~green~)
+
+とりあえず下記の色にしました。
+- #3F3F3F #FFFFFD
+- #F0DFAF #DFAF8F #CC9393 #DC8CC3 #6C3333 #8CD0D3 #93E0E3 #7F9F7F
+
+** init.elの編集
+init.elに下記のleafを書きます。
+
+#+begin_src emacs-lisp
+  (leaf solarized-theme
+    :ensure t
+    :when (version<= "24.1" emacs-version)
+    :custom ((solarized-distinct-fringe-background . t))
+    :defun (solarized-create-theme-file-with-palette solarized-color-blend)
+    :require t
+    :preface
+    (defun c/reload-theme ()
+      (interactive)
+      (let ((theme-name (save-excursion
+                          (goto-char (point-min))
+                          (re-search-forward "deftheme \\([^ ]*\\)")
+                          (substring-no-properties (match-string 1)))))
+        (eval-buffer)
+        (load-theme (intern theme-name) t)))
+    :config
+    (solarized-create-theme-file-with-palette 'dark 'solarized-zenburn-dark
+        '("#3F3F3F" "#FFFFFD"           ; base03 (02 01 00 0 1 2) base3
+          "#F0DFAF" "#DFAF8F"           ; yellow orange
+          "#CC9393" "#DC8CC3"           ; red    magenta
+          "#6C3333" "#8CD0D3"           ; violet blue
+          "#93E0E3" "#7F9F7F"           ; cyan   green
+          ))
+    (load-theme 'solarized-zenburn-dark 'no-confirm))
+#+end_src
+
+なお、私は以下のinit.elを、 ~/.debug.emacs.d/solarized-theme/init.el~ に保存し、
+~emacs -q -l ~/.debug.emacs.d/solarized-theme/init.el~ で読み込みました。
+#+begin_src emacs-lisp
+  ;; ~/.debug.emacs.d/solarized-theme/init.el
+
+  ;; you can run like 'emacs -q -l ~/.debug.emacs.d/{{pkg}}/init.el'
+  (when load-file-name
+    (setq user-emacs-directory
+          (expand-file-name (file-name-directory load-file-name))))
+
+  (prog1 "leaf"
+    (prog1 "install leaf"
+      (custom-set-variables
+       '(package-archives '(("org"   . "https://orgmode.org/elpa/")
+                            ("melpa" . "https://melpa.org/packages/")
+                            ("gnu"   . "https://elpa.gnu.org/packages/"))))
+      (package-initialize)
+      (unless (package-installed-p 'leaf)
+        (package-refresh-contents)
+        (package-install 'leaf))))
+
+  (leaf solarized-theme
+    :ensure t
+    :when (version<= "24.1" emacs-version)
+    :custom ((solarized-distinct-fringe-background . t))
+    :defun (solarized-create-theme-file-with-palette solarized-color-blend)
+    :require t
+    :preface
+    (defun c/reload-theme ()
+      (interactive)
+      (let ((theme-name (save-excursion
+                          (goto-char (point-min))
+                          (re-search-forward "deftheme \\([^ ]*\\)")
+                          (substring-no-properties (match-string 1)))))
+        (eval-buffer)
+        (load-theme (intern theme-name) t)))
+    :config
+    (solarized-create-theme-file-with-palette 'dark 'solarized-zenburn-dark
+        '("#3F3F3F" "#FFFFFD"           ; base03 (02 01 00 0 1 2) base3
+          "#F0DFAF" "#DFAF8F"           ; yellow orange
+          "#CC9393" "#DC8CC3"           ; red    magenta
+          "#6C3333" "#8CD0D3"           ; violet blue
+          "#93E0E3" "#7F9F7F"           ; cyan   green
+          ))
+    (load-theme 'solarized-zenburn-dark 'no-confirm))
+#+end_src
+
+すると、このようになりました。いい感じ!
+
+[[./img/solarized-zenburn-1.png]]
 
