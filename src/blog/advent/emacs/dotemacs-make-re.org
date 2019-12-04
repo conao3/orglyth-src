@@ -1,0 +1,79 @@
+#+title: Re: Makefileで.emacs.dの理想的なディレクトリ構造を生成する話
+#+author: conao3
+#+date: <2019-12-04 Wed 00:16>
+#+options: ^:{}
+
+* Config                                                           :noexport:
+
+* はじめに
+この記事は「[[https://qiita.com/advent-calendar/2019/emacs][Emacs Advent Calendar 2019]]」の4日目の記事として書いたものです。
+
+昨日は私の「[[https://qiita.com/conao3/items/42d34080b69b33ccf313][leaf.elに依存したEmacs設定ファイル「init.el」をバイトコンパイルして爆速にする]]」でした。
+
+まだ空きがあるので、ぜひ参加頂ければと思います!
+
+* 去年のディレクトリ構造
+去年、私は「[[https://qiita.com/conao3/items/851f6dea9e94ce73f385][Makefileで.emacs.dの理想的なディレクトリ構造を生成する話]]」を「[[https://qiita.com/advent-calendar/2018/emacs][Emacs Advent Calendar 2018]]」に投稿しました。
+
+そこで提案したのは以下の構造でした。
+#+begin_example
+  .
+  ├── Makefile
+  ├── Makefunc.mk
+  ├── init.el
+  ├── conf/
+  │   ├── 00_leaf.el
+  │   ├── 01_core-emacs.el
+  │   ├── 10_standard-elisp.el
+  │   ├── 20_editor.el
+  │   ├── 30_utility.el
+  │   └── 40_major-mode.el
+  ├── site-lisp/
+  │   ├── cort.el/
+  │   ├── dash.el/
+  │   ├── f.el/
+  │   ├── feather.el/
+  │   ├── leaf.el/
+  │   ├── org-mode/
+  │   ├── orglyth.el/
+  │   ├── s.el/
+  │   └── use-package/
+  ├── snippets/
+  ├── templete/
+  └── local/
+      ├── conao-mixed-raw.el
+      ├── conao-mixed.el
+      ├── 22.1/
+      │   ├── build/
+      │   │   ├── conao-mixed.el -> ../../conao-mixed.el
+      │   │   └── conao-mixed.elc
+      │   │   snippets/ -> ../../snippets/
+      │   │   templete/ -> ../../templete/
+      │   └── site-lisp/
+      │       ├── cort.el/
+      │       ├── ...
+      │       └── use-pacakge/
+      ├── 23.4/
+      ├── 24.5/
+      ├── 25.3/
+      └── 26.1/
+#+end_example
+
+また、自動生成される前はこの構造です。
+#+begin_example
+  .
+  ├── Makefile
+  ├── Makefunc.mk
+  ├── init.el
+  ├── conf/
+  │   ├── 00_leaf.el
+  │   ├── 01_core-emacs.el
+  │   ├── 10_standard-elisp.el
+  │   ├── 20_editor.el
+  │   ├── 30_utility.el
+  │   └── 40_major-mode.el
+  ├── snippets/
+  └── templete/
+#+end_example
+
+しかし、1年使ってみると
