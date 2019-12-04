@@ -1,0 +1,320 @@
+#+title: leaf.elに依存したEmacs設定ファイル「init.el」をバイトコンパイルして爆速にする
+#+author: conao3
+#+date: <2019-12-03 Thu>
+#+options: ^:{}
+
+* Config                                                           :noexport:
+
+* はじめに
+この記事は「[[https://qiita.com/advent-calendar/2019/emacs][Emacs Advent Calendar 2019]]」の3日目の記事として書いたものです。
+昨日は私の「[[https://qiita.com/conao3/items/db06dc1338aaf8e9b7b1][{2019年アップデート} leaf.elで雑然としたEmacs設定ファイル「init.el」をクリーンにする]]」でした。
+
+まだ空きがあるので、ぜひ参加頂ければと思います!
+
+* バイトコンパイルとは
+Elispはバイトコンパイルすることができ、通常の ~.el~ から ~.elc~ にコンパイルすることができます[fn:1]。
+
+バイトコンパイルすることにより、より効率的にElispコードを実行できるようになります。
+init.elでバイトコンパイルの恩恵はあまり得られないことは言われていますが、しかし数msでも早くなるならやっておきたいのが人情というもの。
+実際どれだけ早くなるのか分からないのだから、試してみるしかないのです。
+
+しかしleaf.elを使っている場合、そのままではバイトコンパイルできません。
+なお、[[https://github.com/conao3/leaf.el][leaf.elのReadme]]でもバイトコンパイルのことには全く触れていません。
+[[https://github.com/conao3/leaf.el#byte-compile-keywords][バイトコンパイルキーワード]]として実装されていることは紹介していますが、実際どのようにしたらいいのか書いてないのです。
+その方法を解説するものです。
+
+* leaf.elとは
+[[https://github.com/conao3/leaf.el][leaf.el]]はjwiwgleyさんの[[https://github.com/jwiegley/use-package][use-package]]を2.5年使った上で、私が感じていたストレスを解消するためにスクラッチから開発したパッケージです。
+本体の説明はQiitaに何回か記事を書いたので、そちらを参照してください
+- プレリリース記事: [[https://qiita.com/conao3/items/82abfea7a4c81f946e60][use-packageからの移行のすゝめ - leaf.elでバージョン安全なinit.elを書く]]
+- リリース記事: [[https://qiita.com/conao3/items/dc88bdadb0523ef95878][{正式リリース}leaf.elで雑然としたEmacs設定ファイル「init.el」をクリーンにする]]
+- 2019年アップデート記事: [[https://qiita.com/conao3/items/db06dc1338aaf8e9b7b1][{2019年アップデート} leaf.elで雑然としたEmacs設定ファイル「init.el」をクリーンにする]]
+
+* let's バイトコンパイル
+** お題について
+お題のinit.elを紹介します。私はこのinit.elを ~/.debug.emacs.d/leaf/init.el~ に保存しました。
+#+begin_src emacs-lisp
+  ;;; init.el --- leaf bytecompile sample   -*- lexical-binding: t; -*-
+
+  ;;; Commentary:
+
+  ;; leaf bytecompile sample
+
+  ;;; Code:
+
+  ;; ~/.debug.emacs.d/leaf/init.el
+
+  ;; you can run like 'emacs -q -l ~/.debug.emacs.d/{{pkg}}/init.el'
+  (when load-file-name
+    (setq user-emacs-directory
+          (expand-file-name (file-name-directory load-file-name))))
+
+  (prog1 "leaf"
+    (prog1 "install leaf"
+      (custom-set-variables
+       '(package-archives '(("org"   . "https://orgmode.org/elpa/")
+                            ("melpa" . "https://melpa.org/packages/")
+                            ("gnu"   . "https://elpa.gnu.org/packages/"))))
+      (package-initialize)
+      (unless (package-installed-p 'leaf)
+        (package-refresh-contents)
+        (package-install 'leaf)))
+
+    (leaf leaf-keywords
+      :ensure t
+      :config
+      ;; optional packages if you want to use :hydra, :el-get,,,
+      (leaf hydra :ensure t)
+      (leaf el-get :ensure t
+        :custom ((el-get-git-shallow-clone . t)))
+
+      ;; initialize leaf-keywords.el
+      (leaf-keywords-init)))
+
+  
+
+  (load (locate-user-emacs-file "../essentials.el"))
+
+  (leaf magit
+    :when (version<= "25.1" emacs-version)
+    :ensure t
+    :preface
+    (defun c/git-commit-a ()
+      "Commit after add anything."
+      (interactive)
+      (shell-command "git add .")
+      (magit-commit-create))
+    :bind (("M-=" . hydra-magit/body))
+    :hydra (hydra-magit
+            (:hint nil :exit t)
+            "
+  ^^         hydra-magit
+  ^^------------------------------
+   _s_   magit-status
+   _C_   magit-clone
+   _c_   magit-commit
+   _d_   magit-diff-working-tree
+   _M-=_ magit-commit-create"
+            ("s" magit-status)
+            ("C" magit-clone)
+            ("c" magit-commit)
+            ("d" magit-diff-working-tree)
+            ("M-=" c/git-commit-a)))
+
+  ;;; init.el ends here
+#+end_src
+
+お題のinit.elにはleafとleaf-keywordsのインストール、magitをpackage.elによってインストール、 ~:hydra~ キーワードも含まれています。
+お題としてはまぁまぁではないでしょうか。
+
+** とりあえずやってみる
+さて、このinit.elをバイトコンパイルするにあたって、注意するべきなのは、「leaf.elがマクロである」ということです。
+
+マクロはバイトコンパイル時には既にコンパイラが定義を知っておく必要があります。
+
+なお、flycheckのエラーも大変なことになっています。
+これでは重要なエラーを見落としてしまいます。
+
+@@ leaf-bytecompile--before @@
+
+とりあえずやってみるということなので、バイトコンパイルしてみます。
+バイトコンパイルはいろいろな方法がありますが、簡単には外部のコンソールからバッジ処理モードでEmacsを起動してバイトコンパイルすることです。
+
+#+begin_src shell
+  $ emacs --version
+  GNU Emacs 26.3
+  Copyright (C) 2019 Free Software Foundation, Inc.
+  GNU Emacs comes with ABSOLUTELY NO WARRANTY.
+  You may redistribute copies of GNU Emacs
+  under the terms of the GNU General Public License.
+  For more information about these matters, see the file named COPYING.
+
+
+  $ emacs -Q --batch -f batch-byte-compile init.el 
+  In toplevel form:
+  init.el:25:25:Warning: ‘(el-get-git-shallow-clone . t)’ is a malformed
+      function
+  init.el:27:9:Warning: reference to free variable ‘leaf-keywords’
+  init.el:31:11:Warning: reference to free variable ‘hydra’
+  init.el:32:11:Warning: reference to free variable ‘el-get’
+  init.el:42:1:Warning: ‘("M-=" . hydra-magit/body)’ is a malformed function
+  init.el:42:1:Warning: ‘"s"’ is a malformed function
+  init.el:42:1:Warning: ‘"C"’ is a malformed function
+  init.el:42:1:Warning: ‘"c"’ is a malformed function
+  init.el:42:1:Warning: ‘"d"’ is a malformed function
+  init.el:42:1:Warning: ‘"M-="’ is a malformed function
+  init.el:42:7:Warning: reference to free variable ‘magit’
+  init.el:52:11:Warning: ‘:hint’ called as a function
+  init.el:62:16:Warning: reference to free variable ‘magit-status’
+  init.el:63:16:Warning: reference to free variable ‘magit-clone’
+  init.el:64:16:Warning: reference to free variable ‘magit-commit’
+  init.el:65:16:Warning: reference to free variable ‘magit-diff-working-tree’
+  init.el:66:18:Warning: reference to free variable ‘c/git-commit-a’
+
+  In end of data:
+  init.el:69:1:Warning: the following functions are not known to be defined:
+      package-installed-p, leaf, leaf-keywords-init, c/git-add,
+      magit-commit-create, hydra-magit, :hint
+#+end_src
+
+なお、バイトコンパイルされた ~elc~ はメジャーバージョンをまたいでの互換性はないので、 ~emacs~ と起動したときにどのバージョンが起動されているのか確認することは重要です。
+さて、バイトコンパイルは大量のワーニングを出してバイトコンパイルできたようです。
+
+。。。できてしまった。
+
+いや、実行はできないはず。。。
+
+#+begin_src emacs-lisp
+  emacs -q -l ~/.debug.emacs.d/leaf/init.el
+#+end_src
+
+@@ leaf-bytecompile--correct.png @@
+
+実行できてしまった。。
+
+あれ、この記事の存在意義が良く分からなくなってしまったのですが、とりあえずワーニングでるの良くないよねということで、
+「ワーニングなしでバイトコンパイルする方法を紹介すること」に方針転換します。。
+
+** バイトコンパイル中の評価 - その1
+「[[https://ayatakesi.github.io/lispref/24.5/elisp-ja.html#Eval-During-Compile][コンパイル中の評価]]」にある通り、バイトコンパイルのときにコンパイラに実行して欲しい式がある場合、 ~eval-when-compile~ で囲むことによって実現できます。
+
+つまりleafのインストールをバイトコンパイル中にしてしまえばいいのです。
+そういえば[[https://github.com/jwiegley/use-package#getting-started][use-packageの推奨インストール]]はそもそもそうやって書かれていたのでした。
+
+#+begin_src diff
+  modified   el/.debug.emacs.d/leaf/init.el
+  @@ -13,17 +13,21 @@
+     (setq user-emacs-directory
+           (expand-file-name (file-name-directory load-file-name))))
+ 
+  -(prog1 "leaf"
+  -  (prog1 "install leaf"
+  -    (custom-set-variables
+  -     '(package-archives '(("org"   . "https://orgmode.org/elpa/")
+  -                          ("melpa" . "https://melpa.org/packages/")
+  -                          ("gnu"   . "https://elpa.gnu.org/packages/"))))
+  -    (package-initialize)
+  -    (unless (package-installed-p 'leaf)
+  -      (package-refresh-contents)
+  -      (package-install 'leaf)))
+  +(eval-when-compile
+  +  (setq user-emacs-directory
+  +        (expand-file-name (file-name-directory default-directory))))
+ 
+  +(eval-when-compile
+  +  (prog1 "leaf"
+  +    (prog1 "install leaf"
+  +      (custom-set-variables
+  +       '(package-archives '(("org"   . "https://orgmode.org/elpa/")
+  +                            ("melpa" . "https://melpa.org/packages/")
+  +                            ("gnu"   . "https://elpa.gnu.org/packages/"))))
+  +      (package-initialize)
+  +      (unless (package-installed-p 'leaf)
+  +        (package-refresh-contents)
+  +        (package-install 'leaf))))
+     (leaf leaf-keywords
+       :ensure t
+       :config
+#+end_src
+
+このように修正しました。バイトコンパイルしてみます。
+一度目はleafやleaf-keywords, hydraのインストールなどが行なわれると思います。出力が見ずらいので、2回目を引用すると以下のようになります。
+#+begin_src shell
+  $ emacs -Q --batch -f batch-byte-compile init.el 
+
+  In end of data:
+  init.el:73:1:Warning: the following functions might not be defined at runtime
+  :                                                                           
+      package-installed-p, hydra-default-pre, hydra-keyboard-quit,
+      hydra--call-interactively-remap-maybe, hydra-show-hint,
+      hydra-set-transient-map
+  init.el:73:1:Warning: the function ‘magit-commit-create’ is not known to be
+      defined.
+#+end_src
+
+どうやらまだワーニングが出ているようです。
+ワーニングは英語の意味そのままで、「バイトコンパイル中には定義を知っているが、実行時には多分知らないよ(実行時エラーになるよ)」ということです。
+実行時、それらの関数がきちんと使えることをバイトコンパイラに伝える必要がありそうです。
+
+なお、 ~user-emacs-diretory~ の設定を ~eval-when-compile~ で囲った上で一つ増やしました。
+これはバイトコンパイル中も ~user-emacs-directory~ を変更しないとホームディレクトリの ~.emacs.d~ を使ってしまうからです。
+
+別ディレクトリのクリーンな環境で実行しているからこそ、見落とさずに変更することができました。
+
+** バイトコンパイル中の評価 - その2
+実行時に評価されないとバイトコンパイラに注意されたので、実行時にも評価するように変更します。
+
+~eval-when-compile~ を ~eval-and-compile~ に変更するだけです。これでバイトコンパイル中にも、実行時にも評価されることを宣言できます。
+#+begin_src diff
+modified   el/.debug.emacs.d/leaf/init.el
+@@ -17,7 +17,7 @@
+   (setq user-emacs-directory
+         (expand-file-name (file-name-directory default-directory))))
+
+-(eval-when-compile
++(eval-and-compile
+   (prog1 "leaf"
+     (prog1 "install leaf"
+       (custom-set-variables
+#+end_src
+
+さて、バイトコンパイルしてみましょう。
+#+begin_src shell
+  $ emacs -Q --batch -f batch-byte-compile init.el 
+
+  In end of data:
+  init.el:73:1:Warning: the function ‘magit-commit-create’ is not known to be
+      defined.
+#+end_src
+
+ワーニングがずいぶん少なくなりました!
+最後に残ったのは ~magit-commit-create~ が定義されていないというワーニングです。
+
+これは ~:preface~ で宣言している ~c/git-commit-a~ で使用しているmagitの内部関数ですね。
+では最後にこのワーニングが出ないようにすればお題クリアです。
+
+** バイトコンパイル中の評価 - その3
+前章で ~magit-commit-create~ が定義されていないというワーニングがでていました。
+ここで、ようやくleafのバイトコンパイルキーワードの出番です。
+
+バイトコンパイルキーワードは2種類あり、 ~:defun~ は関数の宣言、 ~:defvar~ は変数の宣言を行います。
+今回は関数の未定義エラーがでているので、 ~:defun~ を使用します。
+
+#+begin_src diff
+modified   el/.debug.emacs.d/leaf/init.el
+@@ -46,6 +46,7 @@
+ (leaf magit
+   :when (version<= "25.1" emacs-version)
+   :ensure t
++  :defun (magit-commit-create)
+   :preface
+   (defun c/git-commit-a ()
+     "Commit after add anything."
+#+end_src
+
+さて、もう一度バイトコンパイルしてみましょう。
+#+begin_src shell
+  $ emacs -Q --batch -f batch-byte-compile init.el 
+#+end_src
+
+出力がなにもありません。ワーニングなしでコンパイルできたようです!
+
+flycheckのワーニングも全てなくなりました。
+これでflycheckのワーニングが価値あるものになりました。
+
+@@ leaf-bytecompile--after.png @@
+
+* まとめ
+leaf.elを使っているinit.elをバイトコンパイルする方法を紹介しました。
+しかしこれは一番簡単な場合で、もし「init.elを複数のバージョンで読み込む可能性がある」場合は今回の方法は使えません。
+メジャーバージョン間で ~elc~ の互換性は存在しないので、エラーになってしまいます。
+
+とはいえ、そんな状況で使っている人はまれで、多くの人はホームディレクトリの ~.emacs.d~ にinit.elを置いて単一バージョンで使っていると思います。
+この記事が参考になれば幸いです。
+
+最後になりますが、Patreonでご支援を頂ける方を募集しています。普段はleafなどのElispパッケージなどを中心にOSS活動をしつつ、学生をしています。ぜひよろしくお願いします。
+
+https://www.patreon.com/conao3
+
+* Footnotes
+[fn:1] GNU Emacs Lisp Reference Manual - バイトコンパイル https://ayatakesi.github.io/lispref/24.5/elisp-ja.html#Byte-Compilation 
