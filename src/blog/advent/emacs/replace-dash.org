@@ -1,0 +1,28 @@
+#+title:
+#+author: conao3
+#+date: <2019-12-03 Thu>
+#+options: ^:{}
+
+* Config                                                           :noexport:
+
+* はじめに
+この記事は「[[https://qiita.com/advent-calendar/2019/emacs][Emacs Advent Calendar 2019]]」の2日目の記事として書いたものです。
+昨日は私の「[[https://qiita.com/conao3/items/db06dc1338aaf8e9b7b1][{2019年アップデート} leaf.elで雑然としたEmacs設定ファイル「init.el」をクリーンにする]]」でした。
+
+まだ空きがあるので、ぜひ参加頂ければと思います!
+
+* dashとは
+dashとはmagnarsさんによって作られ、現在は主にFuco1さんによってメンテナンスされています。
+[[https://qiita.com/pogin503/items/01005402dc7cfd375b55][Emacsのモダンなライブラリ4+1選 (2013年版)]]にも取り上げられる他、 その使いやすさから[[https://melpa.org/#/dash][440のパッケージ]]から参照されており、
+[[https://melpa.org/#/?sort=downloads&asc=false][ダウンロードランキング]]では唯一100万ダウンロードを達成し、 4000を越えるElispパッケージの堂々たる頂点に君臨しています。
+
+しかし、dashは本当に依存すべきパッケージなのでしょうか。
+あなたのElispパッケージがdashに依存することによって、どれだけのメリットを生んでいるのでしょうか。
+dashがもし仕様変更したとき、あなたのElispパッケージが壊れるデメリットを甘受できるでしょうか。
+
+dashの理念はプレフィックスのない関数を数多く宣言してしまう悪名高い =ci= パッケージに依存しないということでした。
+しかし =ci= パッケージは =ci-lib= パッケージとして整理され、 Emacsビルトインの =subr= パッケージも大きく進化しています。
+一方でdashはMELPA登録パッケージが解決すべきであるpackage-lint/checkdocのエラー/ワーニングを[[https://github.com/magnars/dash.el/pull/327][470件も放置し]]、 [[https://github.com/magnars/dash.el/pull/328][CIは一ヶ月前から通っていません]]。
+
+dashの関数を既に大量に使っている場合は[[https://github.com/bbatsov/projectile/pull/1046][こんな感じで大変]]ですが、これからのElispパッケージを作る場合はdash非依存で作ってみてはいかがでしょうか。
+
