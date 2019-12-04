@@ -76,41 +76,293 @@
   └── templete/
 #+end_example
 
-しかし、1年使ってみると考え方も変わり、Makefileもずいぶん簡単になったので、その紹介をするものです。
-
 * 今年のディレクトリ構造
+さて、1年使ってみると考えも変わってきます。大きく変わったのは「モダンなinit.elはファイル分割する」という観点です。
+実際、ファイル分割によって見通しのよいinit.el群の管理と読み込み順の管理、さらには条件付きの設定が実現できていました。
+
+しかし、leaf.elの開発によって、巨大なinit.elを一つだけもっていたとしても[[https://qiita.com/conao3/items/db06dc1338aaf8e9b7b1#add-imenu-support-feature][imenuですぐにジャンプ]]できますし、leaf.elには[[https://qiita.com/conao3/items/dc88bdadb0523ef95878#%25E6%259D%25A1%25E4%25BB%25B6%25E5%2588%2586%25E5%25B2%2590%25E3%2582%25AD%25E3%2583%25BC%25E3%2583%25AF%25E3%2583%25BC%25E3%2583%2589][強力な条件分岐キーワード]]があります。
+
+よって、現在ではこのようなディレクトリ構造になっています
+#+begin_example
+  .
+  ├── Makefile
+  ├── Makefunc.mk
+  ├── init.el
+  ├── conf.el
+  ├── site-lisp/
+  │   ├── cort-test.el/
+  │   ├── feather.el/
+  │   ├── orglyth.el/
+  │   └── leaf.el/
+  ├── snippets/
+  ├── templetes/
+  └── local/
+    ├── 22.1/
+    ├── 23.4/
+    ├── 24.5/
+    ├── 25.3/
+    ├── 26.1/
+    ├── 26.2/
+    └── 26.3/
+        ├── Makefile
+        ├── conf.el -> ../../conf.el
+        ├── conf.elc
+        ├── elpa/
+        ├── snippets/ -> ../../snippets/
+        ├── templetes/ -> ../../templetes/
+        └── site-lisp/ -> ../../site-lisp/
+#+end_example
+
+なお自動生成前はこのようなディレクトリ構造です。つまりこの構造が[[https://github.com/conao3/dotfiles/tree/master/.dotfiles/.emacs.d][GitHubで見えて]]います。
 #+begin_example
   .
   ├── Makefile
   ├── Makefile-local.mk
   ├── init.el
   ├── conf.el
-  ├── site-lisp/
-  │   ├── cort.el/
-  │   ├── dash.el/
-  │   ├── f.el/
-  │   ├── feather.el/
-  │   ├── leaf.el/
-  │   ├── org-mode/
-  │   ├── orglyth.el/
-  │   ├── s.el/
-  │   └── use-package/
   ├── snippets/
-  ├── templetes/
-  └── local/
-      ├── 22.1/
-      ├── 23.4/
-      ├── 24.5/
-      ├── 25.3/
-      ├── 26.1/
-      ├── 26.2/
-      └── 26.3/
-          ├── snippets/ -> ../../snippets/
-          ├── templetes/ -> ../../templetes/
-          └── site-lisp/
-              ├── leaf.el/
-              ├── ...
-              └── use-pacakge/
-      
+  └── templete/
 #+end_example
 
+このディレクトリ構造は以下の特徴を持っています。
+- メジャーバージョンの異なる、複数のEmacsを同時に使用できる。
+- (M)ELPAからダウンロード、コンパイルしたパッケージは ~local/[ver]/elpa/~ 以下に置かれる。(異なるバージョン間で混同しない)
+- site-lispは全バージョンで同じディレクトリを使用する。(開発中のパッケージを置いてるので、いちいちコピーするのが面倒)
+- Emacsパッケージが保存するセンシティブな情報を一括で.gitignoreできる。
+
+去年は気づいていませんでいませんでしたが、特に最後の特徴は重要な意味を持つことに気付きました。
+データの永続化のために ~user-emacs-directory~ (通常は ~$HOME/.emacs.d~ )にファイルを保存するEmacsパッケージは多く存在しており、その情報は取り扱いに注意が必要なものもあります。
+
+やばそう(普通他人に見せない)なものの代表例はこちらです。
+- [[https://github.com/search?utf8=%25E2%259C%2593&q=path%253A.emacs.d+filename%253Asession&type=Code&ref=advsearch&l=&l=][session]]
+- [[https://github.com/search?q=path%253A.emacs.d+filename%253A.emacs.desktop&type=Code][.emacs.desktop]]
+- [[https://github.com/search?utf8=%25E2%259C%2593&q=path%253A.emacs.d+filename%253Atramp&type=Code&ref=advsearch&l=&l=][tramp]]
+- [[https://github.com/search?utf8=%25E2%259C%2593&q=path%253A.emacs.d+filename%253Arecentf&type=Code&ref=advsearch&l=&l=][recentf]]
+- [[https://github.com/search?q=path%253A.emacs.d+filename%253Ajisyo&type=Code][jisyo]] (ddskk)
+
+これらはおそらく ~.gitignore~ 漏れだと思います。(意図してgit管理している場合もあるのでしょうが。。)
+
+重要なのは、「どのEmacsパッケージが、どんな名前で情報を保存するのかは分からない」という点です。
+
+この状況でブラックリスト管理するのは無理があります。
+たしかに ~.gitignore~ にもホワイトリスト管理する方法がありますが、簡単なのは 「 ~user-emacs-directory~ を ~local~ 以下に変更して、 ~local~ を ~.gitignore~ する」という方法です。
+
+これなら ~user-emacs-directory~ 以下にどれだけセンシティブな情報を保存したとしてもまとめてignoreされます。
+
+* Makefile
+現在のMakefileを紹介します。これを見ると、[[https://qiita.com/conao3/items/851f6dea9e94ce73f385#makefile%25E5%2585%25A8%25E6%2596%2587][去年]]よりは簡単になっています。
+
+#+begin_src makefile
+## Makefile
+
+all:
+
+XARGS := xargs $(shell if ( echo | xargs -r > /dev/null 2>&1 ); then echo "-r"; else echo ""; fi)
+
+DEV_PKGS := leaf.el leaf-keywords.el orglyth.el cort-test.el seml-mode.el navbar.el
+DEV_PKGS  += feather.el feather-server.el leaf-browser.el solarized-emacs
+DEV_PKGS  += liskk.el
+DEV_PKGS  += phantom-inline-comment annotate.el point-history
+DEV_PKGS  += ivy-posframe helm-swoop flylint
+
+EMACS_LST_RAW := 22.0 22.1 22.2 22.3
+EMACS_LST_RAW  += 23.0 23.1 23.2 23.3 23.4
+EMACS_LST_RAW  += 24.0 24.1 24.2 24.3 24.4 24.5
+EMACS_LST_RAW  += 25.0 25.1 25.2 25.3
+EMACS_LST_RAW  += 26.0 26.1 26.2 26.3
+EMACS_LST_RAW  += 27.0
+
+EMACS_LST := $(shell echo $(EMACS_LST_RAW) | sed "s/ /\n/g" | $(XARGS) -I% sh -c "if type emacs-% >/dev/null 2>&1; then echo %; fi")
+DIRS := local
+
+export XARGS
+export DEV_PKGS
+
+##################################################
+
+.PHONY: all clean
+.PRECIOUS: site-lisp/%
+all: $(DIRS) $(DEV_PKGS:%=site-lisp/%) $(EMACS_LST:%=local/%)
+	@$(call ECHO_YELLOW,"make job:all completed!!","\n","\n")
+
+$(DIRS):
+	mkdir -p $@
+
+##############################
+
+site-lisp/%:
+	@mkdir -p $(@D)
+	$(if $(wildcard ~/dev/repos/$*), cd site-lisp; ln -sf ~/dev/repos/$*,\
+	$(if $(wildcard ~/dev/forks/$*), cd site-lisp; ln -sf ~/dev/forks/$*,\
+	cd site-lisp; git clone https://github.com/conao3/$*.git))
+
+local/%: local conf.el Makefile-local.mk
+	mkdir -p $@
+	cp -f Makefile-local.mk $@/Makefile
+	cp -f conf.el $@/conf.el
+	$(MAKE) -C $@
+
+##############################
+
+clean-elc:
+	find site-lisp -follow -name "*.elc" | $(XARGS) rm -rf
+
+clean:
+	-rm -rf local
+	@$(call ECHO_CYAN,"make job:clean completed!!","\n","\n")
+#+end_src
+
+#+begin_src makefile
+## Makefile-local
+
+all:
+
+EMACS ?= emacs-$(shell basename $$(pwd))
+XARGS ?=
+
+SYMS := latex-math-preview-cache lice snippets templates conf.el
+
+##################################################
+
+all: conf.elc $(SYMS)
+
+%.elc: %.el site-lisp
+	$(EMACS) -Q --batch -f batch-byte-compile $<
+
+%.el: ../../%.el
+
+$(SYMS):
+	ln -sf ../../$@
+#+end_src
+
+* バイトコンパイルについて
+昨日の記事、「[[https://qiita.com/conao3/items/42d34080b69b33ccf313][leaf.elに依存したemacs設定ファイル「init.el」をバイトコンパイルして爆速にする]]」の[[https://qiita.com/conao3/items/42d34080b69b33ccf313#%25E3%2581%25BE%25E3%2581%25A8%25E3%2582%2581][まとめ]]でも触れましたが、
+バイトコンパイルした後の ~elc~ はメジャーバージョンをまたいでの互換性はありません。
+
+つまり異なるメジャーバージョンのEmacsを同時に動かそうとすると ~elc~ にコンパイルできませんでした。
+
+しかし、 ~.emacs.d/init.el~ はバージョン間で共通にしておいて、本体を別のファイルにしておけば、そのファイルはバイトコンパイルできることに気付きました。
+
+ということでディレクトリ構成もそうなっていて、 ~.emacs.d/init.el~ は全バージョン共通(バイトコンパイルしない)、
+~conf.el~ は ~.emacs.d/local/{{ver}}/conf.el~ からシンボリックリンクを張り、それぞれのバージョンで ~conf.elc~ にバイトコンパイルすることになっています。
+
+よって、[[https://github.com/conao3/dotfiles/blob/master/.dotfiles/.emacs.d/init.el][init.el]]は以下のように、 ~user-emacs-directory~ を変更して、 ~conf.elc~ を読み込むだけです。
+
+#+begin_src emacs-lisp
+;;; init.el
+
+(prog1 "Change user-emacs-directory"
+  ;; enable debug
+  (setq debug-on-error  t
+        init-file-debug t)
+
+  ;; you can run like 'emacs -q -l ~/hoge/init.el'
+  (when load-file-name
+    (setq user-emacs-directory
+          (expand-file-name (file-name-directory load-file-name))))
+
+  ;; change user-emacs-directory
+  (setq user-emacs-directory
+        (expand-file-name
+         (format "local/%s.%s/"
+                 emacs-major-version emacs-minor-version)
+         user-emacs-directory)))
+
+(condition-case err
+    (load (expand-file-name "conf" user-emacs-directory))
+  (error
+   (error "You need `make' before running Emacs! Raw err: %s" err)))
+#+end_src
+
+[[https://github.com/conao3/dotfiles/blob/master/.dotfiles/.emacs.d/conf.el][conf.el]]の先頭ではleafの初期化を行って、あとは気のむくままにパッケージの設定を書いていきます。
+
+注意点として、私はleafの開発版をsite-lispに持っているので、少しインストールコードが異なっています。
+
+#+begin_src emacs-lisp
+(eval-when-compile
+  (setq user-emacs-directory
+        (expand-file-name (file-name-directory default-directory))))
+
+(eval-and-compile
+  (defvar package-archives)
+  (setq package-archives '(("org"   . "https://orgmode.org/elpa/")
+                           ("melpa" . "https://melpa.org/packages/")
+                           ("gnu"   . "https://elpa.gnu.org/packages/")))
+  (package-initialize)
+
+  (add-to-list 'load-path (locate-user-emacs-file "site-lisp/leaf.el"))
+  (add-to-list 'load-path (locate-user-emacs-file "site-lisp/leaf-keywords.el"))
+
+  (require 'leaf)
+
+  (leaf leaf
+    :config
+    (leaf leaf-keywords
+      :require t
+      :init
+      (leaf package
+        :init
+        (leaf *elpa-workaround
+          :when (or (version= "26.1" emacs-version)
+                    (version= "26.2" emacs-version))
+          :custom ((gnutls-algorithm-priority . "NORMAL:-VERS-TLS1.3")))
+        :config
+        (leaf *elsa-workaround
+          :custom ((package-user-dir . "/home/conao/.emacs.d/local/26.3/elpa"))))
+
+      (leaf hydra
+        :ensure t
+        :config
+        (leaf *hydra-posframe
+          :when (version<= "26.1" emacs-version)
+          :when window-system
+          :custom `((hydra-hint-display-type . 'posframe)
+                    (hydra-posframe-show-params
+                     . ',(list :internal-border-width 1
+                               :internal-border-color "red"
+                               :poshandler 'posframe-poshandler-window-bottom-right-corner)))))
+
+      (leaf el-get
+        :ensure t
+        :init (unless (executable-find "git")
+                (warn "'git' couldn't found. el-get can't download any packages"))
+        :custom ((el-get-git-shallow-clone  . t)))
+
+      (leaf diminish
+        :ensure t)
+
+      (leaf cus-edit
+        :custom `((custom-file . ,(locate-user-emacs-file "custom.el"))))
+
+      :config
+      (leaf-keywords-init)))
+
+  (leaf *libraries
+    :config
+    (leaf dash :ensure t :require t)
+    (leaf ts :ensure t :require t)
+    (leaf buttercup :ensure t :require t)
+    (leaf ert-async :ensure t :require t)))
+
+  ;; あとはパッケージの設定を書く
+  (leaf ...)
+#+end_src
+
+* まとめ
+色んなバージョンのEmacsを使うために、このディレクトリ構造にしましたが、思いがけず不要なファイルをgit管理しない構造になっていたことを発見しました。
+
+この構造にメリットを見いだす人はわずかだとは思いますが、備忘録として残しておきます。
+
+なお、Emacs-27からは ~early-init.el~ のロード追加されており、[[https://www.reddit.com/r/emacs/comments/7yns85/emacs_adds_support_for_a_second_read_earlier_init/][クラスタは色めきあって]]います。
+さらにEmacs-27から[[https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html][XDG Base Directory Specification]]にのっとり、 ~.config/emacs/init.el~ を最優先で読み込むようになっているようです。([[https://github.com/emacs-mirror/emacs/commit/4118297ae2fab4886b20d193ba511a229637aea3][該当コミット]] / [[https://github.com/emacs-mirror/emacs/blob/4118297ae2fab4886b20d193ba511a229637aea3/etc/NEWS#L135-L142][NEWS]]) 
+(tomoyaさんが最初の報告、コミットとNEWSはelimさんが探してくだだり、[[https://emacs-jp.github.io/][emacs-jpのSlack]]で共有して頂いた情報です。)
+
+[[https://wiki.archlinux.jp/index.php/XDG_Base_Directory_%25E3%2582%25B5%25E3%2583%259D%25E3%2583%25BC%25E3%2583%2588][ArchのWiki]]でもEmacsは「ハードコードされているソフトウェア」にリストされていますが、修正が必要になるかもしれません。
+
+これらのupstreamの修正により私のdotfilesも変更を迫られるでしょうが、過度に保守的にならず、現在も修正が加えられているというのは喜ばしいことです。
+
+[[https://lists.gnu.org/archive/html/emacs-devel/2019-11/msg00970.html][Emacs-27ももうすぐリリース]]されるようです(tak.kunihiroさんに共有して頂いた情報)。Emacsコントリビュータの人に感謝しつつ、いつか本体に貢献したいなと思っています。
+
+最後になりますが、Patreonでご支援を頂ける方を募集しています。普段はleafなどのElispパッケージなどを中心にOSS活動をしつつ、学生をしています。ぜひよろしくお願いします!
+
+https://www.patreon.com/conao3
