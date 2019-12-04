@@ -221,3 +221,4 @@ init.elに下記のleafを書きます。
 
 [[./img/solarized-zenburn-1.png]]
 
+
