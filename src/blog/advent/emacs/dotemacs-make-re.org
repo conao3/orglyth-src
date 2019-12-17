@@ -76,4 +76,41 @@
   └── templete/
 #+end_example
 
-しかし、1年使ってみると
+しかし、1年使ってみると考え方も変わり、Makefileもずいぶん簡単になったので、その紹介をするものです。
+
+* 今年のディレクトリ構造
+#+begin_example
+  .
+  ├── Makefile
+  ├── Makefile-local.mk
+  ├── init.el
+  ├── conf.el
+  ├── site-lisp/
+  │   ├── cort.el/
+  │   ├── dash.el/
+  │   ├── f.el/
+  │   ├── feather.el/
+  │   ├── leaf.el/
+  │   ├── org-mode/
+  │   ├── orglyth.el/
+  │   ├── s.el/
+  │   └── use-package/
+  ├── snippets/
+  ├── templetes/
+  └── local/
+      ├── 22.1/
+      ├── 23.4/
+      ├── 24.5/
+      ├── 25.3/
+      ├── 26.1/
+      ├── 26.2/
+      └── 26.3/
+          ├── snippets/ -> ../../snippets/
+          ├── templetes/ -> ../../templetes/
+          └── site-lisp/
+              ├── leaf.el/
+              ├── ...
+              └── use-pacakge/
+      
+#+end_example
+
