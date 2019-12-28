@@ -70,7 +70,7 @@ emacs-jpの有志によって大量のカラーテーマが変換されました
 MELPAで「theme」と検索すると現在[[https://melpa.org/#/?q=theme][257パッケージがヒット]]します。それぞれにこの定義が書いてあるというのは恐ろしいと思います。管理できないし、報われない。。
 
 * solarized-zenbarn
-「Emacs Theme Gallery」から1位のzenburnをsolarizedのAPIを使って再現してみます。
+「[[https://pawelbx.github.io/emacs-theme-gallery/][Emacs Theme Gallery]]」から1位のzenburnをsolarizedのAPIを使って再現してみます。
 
 私も作りながら記事を書いているので、ぜひ一緒に作ってみるとどうやって使うのか分かりやすいと思います。
 

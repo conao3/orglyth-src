@@ -1,0 +1,13 @@
+#+title: pp.elの拡張パッケージ; ppp.elをMELPAに登録した話
+#+author: conao3
+#+date: <2019-12-25 Wed>
+#+options: ^:{}
+
+* Config                                                           :noexport:
+
+* はじめに
+この記事は「[[https://qiita.com/advent-calendar/2019/emacs][Emacs Advent Calendar 2019]]」の23日目の記事として書いたものです。
+昨日は @maebaru さんの「[[https://qiita.com/maebaru/items/f7163b70625865b32e68][Emacsユーザ向けChrome拡張機能を公開してみた]]」でした。
+
+* pp.elについて
+Elispに限らず、様々な言語
