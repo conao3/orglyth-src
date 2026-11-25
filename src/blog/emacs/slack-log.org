@@ -1743,7 +1743,7 @@ C++はちゃんとしたパーサで解析しないときつい言語だ. 正規
 yyuta [11:06]
 modern-cpp-font-lockの作者さん、rtagsから足りないハイライトのデータ取ろうとしてるみたい https://github.com/Andersbakken/rtags/issues/677
 GitHub
-Syntax highlighting · Issue #677 · Andersbakken/rtags · GitHub
+Syntax highlighting / Issue #677 / Andersbakken/rtags / GitHub
 Is it completely insane to ask whether it would be possible to write a major mode for C++ that uses rtags to query the type of token for syntax highlighting, instead of doing it regex based? I fou...
 
 syohex [10:59]
@@ -1764,7 +1764,7 @@ chromatica.nvim - Clang based syntax highlighting for Neovim
 yyuta [10:15]
 https://github.com/ensime/ensime-emacs/issues/312
 GitHub
-Optimize semantic highlighting. Somehow... · Issue #312 · ensime/ensime-emacs · GitHub
+Optimize semantic highlighting. Somehow... / Issue #312 / ensime/ensime-emacs / GitHub
 1) We unconditionally clear all overlays before applying new ones, so small edits with purely local effects end up triggering big repaints. 2) The results of a highlight are often invalidated befo...
 ensimeがすでにsemantic highlightingができるみたいだけど、効率的ではないみたいですね
 
@@ -1831,7 +1831,7 @@ takaxp [16:20]
 syohex [17:40]
 https://github.com/bbatsov/projectile/pull/1046
 GitHub
-Replace dash with cl-lib by abo-abo · Pull Request #1046 · bbatsov/projectile · GitHub
+Replace dash with cl-lib by abo-abo / Pull Request #1046 / bbatsov/projectile / GitHub
 Using e.g. the standard cl-remove-if in place of 4 aliases (-remove, --remove, -reject, --reject) improves code quality and eases new contributions and refactoring. I've also rewritten Makefile, b...
 別に使ってもいいと思うけどなぁ...
 
@@ -2045,7 +2045,7 @@ https://gitlab.com/emacs-ci/emacs/commit/8e394b082bd6ecd9ba212cb3ca07cbace66767a
 
 久しぶりにビルドし直して気づいたけど, find-fileのこの変更で popwin入れていると, find-fileの挙動がひどいことになる.
 GitLab
-Preserve point under 'dired-auto-revert-buffer' (third case) (8e394b08) · Commits · emacs-ci / emacs
+Preserve point under 'dired-auto-revert-buffer' (third case) (8e394b08) / Commits / emacs-ci / emacs
 lisp/files.el (find-file): Use pop-to-buffer-same-window instead of switch-to-buffer. This preserves Dired window point when dired-auto-revert-buffer is non-nil. (Bug#27243) * test/lisp/dired-tests.el (dired-test-bug27243-01) (dired-test-bug27243-02, dired-test-bug27243-03): New tests. The first two replace a...
 
 takaxp [13:31]
@@ -2141,7 +2141,7 @@ takaxp [17:02]
 yyuta [17:05]
 https://github.com/nim-lang/nim-mode/issues/140
 GitHub
-use nimsuggest's `highlight` method · Issue #140 · nim-lang/nim-mode
+use nimsuggest's `highlight` method / Issue #140 / nim-lang/nim-mode
 TODO list 1. make PR to nimlang/nimsuggest.nim, not merged yet (nim-lang/Nim#6562) 2. implement highlight package for emacs (maybe ensime is good example) 3. package (2) improvement. it still h...
 (ここでスクリーンショット貼る方法わからずリンクでごめんなさい）
 上のスクリーンショットはnim-mode本体のfont-lockキーワード抜きでnimsuggestというeditor/ide toolsのハイライト情報だけでハイライトした状態です。
@@ -2470,10 +2470,10 @@ https://sam217pa.github.io/2016/09/11/nuclear-power-editing-via-ivy-and-ag/
 https://github.com/syl20bnr/spacemacs/pull/8069/files
 この辺参考にすれば一発でいけそうな気もしますが、僕はまだやってないですね(そもそも今朝までできないって思ってたので笑
 sam217pa.github.io
-Nuclear weapon multi-editing via Ivy and Ag · Samuel Barreto
+Nuclear weapon multi-editing via Ivy and Ag / Samuel Barreto
 Replace each occurence of string in your current directory
 GitHub
-ivy: Add C-c C-e to edit counsel-ag search results by aaronjensen · Pull Request #8069 · syl20bnr/spacemacs
+ivy: Add C-c C-e to edit counsel-ag search results by aaronjensen / Pull Request #8069 / syl20bnr/spacemacs
 Adds C-c C-e like helm-ag to edit search results in ivy.
 
 takaxp [13:21]
@@ -2544,7 +2544,7 @@ takaxp [04:44]
 emacs 26 から popup.el 代替機能(child-frame)が載るのかな？ company-mode でのバグ報告スクショが楽しいことになってますけどw
 https://github.com/company-mode/company-mode/issues/745 （編集済み） 
 GitHub
-Suggest:  Add a frontend based child-frame feature of emacs 26 · Issue #745 · company-mode/company-mode
+Suggest:  Add a frontend based child-frame feature of emacs 26 / Issue #745 / company-mode/company-mode
 Emacs 26 add child-frame feature, which can be used to show menu. I have tested with the below example, it is faster than popup.el. so I suggest add a new frontend based this feature (defvar my-ch...
 child-frame って複数フレームを透過させて重畳とかエモいこともできるのかな…
 
@@ -2569,7 +2569,7 @@ niku [12:59]
 ありがとうございます．一晩寝て考えた結果まずリファクタリングのPRを送ろうという気持になりました
 https://github.com/bbatsov/projectile/pull/1216
 GitHub
-Make project settings declarative by niku · Pull Request #1216 · bbatsov/projectile
+Make project settings declarative by niku / Pull Request #1216 / bbatsov/projectile
 I found some setting for project could be declared by using projectile-register-project-type. Thanks to #1204, #1207. I beleive we are easy to understand that settings about a project type in the o...
 
 niku [11:06]
@@ -4392,7 +4392,7 @@ Melpa+Cask環境で個人用レシピを使いたい - Qiita
 kozo2 [18:19]
 https://sam217pa.github.io/2016/09/13/from-helm-to-ivy/
 sam217pa.github.io
-From helm, to ivy · Samuel Barreto
+From helm, to ivy / Samuel Barreto
 A user perspective.
 結構前だけど 記事末尾の比較tableがよいと思った （編集済み） 
 
@@ -4512,7 +4512,7 @@ Kazuki Yoshida (kaz_yos) [04:28]
 homebrew emacs --HEADでのこのタイトルバーの文字が変な色になる問題を解決できたかたいらっしゃいますか?
 https://github.com/d12frosted/homebrew-emacs-plus/issues/55#issuecomment-366517400
 GitHub
-Title bar text color broken · Issue #55 · d12frosted/homebrew-emacs-plus
+Title bar text color broken / Issue #55 / d12frosted/homebrew-emacs-plus
 I am having an issue with the transparent title bar. I am using Spacemacs, and the config for the title bar can be seen at the top of this screenshot. I have seen screenshots where it doesn't look ...
 
 syohex [12:11]
@@ -4551,7 +4551,7 @@ GitHub
 d12frosted/homebrew-emacs-plus
 homebrew-emacs-plus - Emacs Plus formulae for the Homebrew package manager
 GitHub
-Title bar text color broken · Issue #55 · d12frosted/homebrew-emacs-plus
+Title bar text color broken / Issue #55 / d12frosted/homebrew-emacs-plus
 I am having an issue with the transparent title bar. I am using Spacemacs, and the config for the title bar can be seen at the top of this screenshot. I have seen screenshots where it doesn't look ...
 
 takaxp [22:35]
@@ -5658,7 +5658,7 @@ tadsan [17:27]
 https://github.com/emacs-mirror/emacs/blob/emacs-26.1/lisp/progmodes/python.el
 https://gitlab.com/python-mode-devs/python-mode/blob/master/python-mode.el
 GitLab
-python-mode.el · master · python-mode-devs / python-mode
+python-mode.el / master / python-mode-devs / python-mode
 GitLab.com
 lisp/progmodes/python.el
 ```
