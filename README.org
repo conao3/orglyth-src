@@ -1,8 +1,8 @@
 #+author: conao3
 
-#+html: <p align="center"><img src="docs/assets/banner.png" alt="orglyth-src: Raw conao's blog org sources" width="880"></p>
+#+html: <p align="center"><img src="docs/assets/banner.png" alt="orglyth-src: Org source files of conao&#x27;s blog" width="880"></p>
 
-#+html: <p align="center"><strong>Raw conao's blog org sources</strong></p>
+#+html: <p align="center"><strong>Org source files of conao's blog</strong></p>
 
 #+html: <p align="center"><a href="LICENSE"><img src="https://img.shields.io/github/license/conao3/orglyth-src" alt="License"></a> <a href="https://github.com/conao3/orglyth-src/stargazers"><img src="https://img.shields.io/github/stars/conao3/orglyth-src?style=flat" alt="GitHub stars"></a></p>
 
